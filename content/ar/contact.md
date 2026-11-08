@@ -3,8 +3,8 @@
 <!-- page: contact | slug: /contact | lang: ar | dir: rtl -->
 <!-- No form backend: every action is a wa.me, mailto: or tel: link. -->
 
-- page.title: تواصل معنا | درجينة
-- page.meta_description: تواصل مع درجينة على واتساب +973 3404 7233 أو البريد info@darjina.com، واطلب عرضاً تجريبياً لمحل العبايات.
+- page.title: تواصل معنا | دارجينا
+- page.meta_description: تواصل مع دارجينا على واتساب +973 3404 7233 أو البريد info@darjina.com، واطلب عرضاً تجريبياً لمحل العبايات.
 <!-- ~110 chars -->
 
 ---
@@ -12,7 +12,7 @@
 ## section#intro
 
 - intro.title: يسعدنا نسمع منك
-- intro.text: عندك سؤال، أو تبي تشوف درجينة على طلبات محلك؟ كلّمنا بالطريقة التي تناسبك.
+- intro.text: عندك سؤال، أو تبي تشوف دارجينا على طلبات محلك؟ كلّمنا بالطريقة التي تناسبك.
 
 ---
 
@@ -65,10 +65,10 @@
   - الوقت المناسب لك للعرض.
 - demo.cta_primary: اطلب العرض على واتساب
 - demo.cta_primary_href: https://wa.me/97334047233?text=%D8%A3%D8%B1%D9%8A%D8%AF%20%D8%B9%D8%B1%D8%B6%D8%A7%D9%8B%20%D8%AA%D8%AC%D8%B1%D9%8A%D8%A8%D9%8A%D8%A7%D9%8B%20%D9%84%D8%AA%D8%B7%D8%A8%D9%8A%D9%82%20%D8%AF%D8%B1%D8%AC%D9%8A%D9%86%D8%A9
-  <!-- prefilled: «أريد عرضاً تجريبياً لتطبيق درجينة» -->
+  <!-- prefilled: «أريد عرضاً تجريبياً لتطبيق دارجينا» -->
 - demo.cta_secondary: اطلب العرض بالبريد
 - demo.cta_secondary_href: mailto:info@darjina.com?subject=%D8%B7%D9%84%D8%A8%20%D8%B9%D8%B1%D8%B6%20%D8%AA%D8%AC%D8%B1%D9%8A%D8%A8%D9%8A%20-%20%D8%AF%D8%B1%D8%AC%D9%8A%D9%86%D8%A9
-  <!-- subject: «طلب عرض تجريبي - درجينة» -->
+  <!-- subject: «طلب عرض تجريبي - دارجينا» -->
 - demo.privacy_note: لا ترسل لنا بيانات زبائنك في الرسالة. يكفي وصف محلك.
 
 ---

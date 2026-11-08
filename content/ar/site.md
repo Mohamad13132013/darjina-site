@@ -4,7 +4,7 @@
 <!-- Keys are stable: the designer and the English translator map by key, not by text. -->
 
 ## brand
-- brand.name: درجينة
+- brand.name: دارجينا
 - brand.name_latin: Darjina
 - brand.name_vocalized: دَرْجِينة
 - brand.tagline: دفتر محل العبايات… صار في جوالك.
@@ -32,7 +32,7 @@
 - cta.email_href: mailto:info@darjina.com
 - cta.demo: اطلب عرضاً تجريبياً
 - cta.demo_href: https://wa.me/97334047233?text=%D8%A3%D8%B1%D9%8A%D8%AF%20%D8%B9%D8%B1%D8%B6%D8%A7%D9%8B%20%D8%AA%D8%AC%D8%B1%D9%8A%D8%A8%D9%8A%D8%A7%D9%8B%20%D9%84%D8%AA%D8%B7%D8%A8%D9%8A%D9%82%20%D8%AF%D8%B1%D8%AC%D9%8A%D9%86%D8%A9
-  <!-- prefilled text: «أريد عرضاً تجريبياً لتطبيق درجينة» -->
+  <!-- prefilled text: «أريد عرضاً تجريبياً لتطبيق دارجينا» -->
 - cta.features: شوف المزايا
 - cta.how_it_works: شوف كيف يعمل
 - cta.back_home: العودة إلى الرئيسية
@@ -46,7 +46,7 @@
 - contact.hours: [يُحدَّد]
 
 ## footer
-- footer.about_title: درجينة
+- footer.about_title: دارجينا
 - footer.about_text: تطبيق عربي لمحلات خياطة العبايات في الخليج. يرتّب الفواتير والقياسات والدفعات ومتابعة الطلبات في مكان واحد.
 - footer.links_title: روابط
 - footer.links: [الرئيسية، المزايا، كيف يعمل، من نحن، تواصل معنا، سياسة الخصوصية]
@@ -56,7 +56,7 @@
   - هاتف وواتساب: +973 3404 7233
   - مملكة البحرين
 - footer.availability: متوفر الآن على iPhone عبر TestFlight، ونسخة Android جاهزة.
-- footer.copyright: © 2026 درجينة. جميع الحقوق محفوظة.
+- footer.copyright: © 2026 دارجينا. جميع الحقوق محفوظة.
 - footer.made_in: صُنع في البحرين لمحلات العبايات في الخليج.
 
 ## cookie / misc (only if the designer needs them)
@@ -66,9 +66,9 @@
 - misc.new_badge: جديد
 
 ## SEO — default meta (fallback for pages without their own)
-- seo.default_title: درجينة | تطبيق محلات خياطة العبايات
+- seo.default_title: دارجينا | تطبيق محلات خياطة العبايات
 - seo.default_description: تطبيق عربي لمحلات العبايات: فاتورة خلال ثوانٍ، قياسات على صورة العباية، دفعات وعربون، متابعة الطلبات ولوحة للمالك. اطلب عرضاً تجريبياً.
-- seo.og_image_alt: شعار درجينة على خلفية لعباية وأدوات خياطة
+- seo.og_image_alt: شعار دارجينا على خلفية لعباية وأدوات خياطة
 - seo.locale: ar_BH
 - seo.locale_alternates: ar_SA, ar_AE, ar_KW, ar_QA, ar_OM, en
 

@@ -1,6 +1,6 @@
 # darjina.com — marketing website
 
-Static marketing site for **Darjina / درجينة**, the app for abaya tailor shops in the GCC.
+Static marketing site for **Darjina / دارجينا**, the app for abaya tailor shops in the GCC.
 Arabic first (RTL) at the root, English (LTR) under `/en/`. Plain HTML + one CSS file + a tiny
 vanilla JS file. No framework, no build step needed to host it.
 
