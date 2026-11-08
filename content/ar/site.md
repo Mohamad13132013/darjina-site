@@ -43,7 +43,6 @@
 - contact.phone_href: tel:+97334047233
 - contact.whatsapp_display: +973 3404 7233
 - contact.location: مملكة البحرين
-- contact.hours: [يُحدَّد]
 
 ## footer
 - footer.about_title: دارجينا

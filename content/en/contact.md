@@ -28,7 +28,7 @@
   - channels.phone.icon: phone
     channels.phone.title: Phone
     channels.phone.value: +973 3404 7233
-    channels.phone.text: Call us during working hours.
+    channels.phone.text: Call us directly.
     channels.phone.cta: Call now
     channels.phone.href: tel:+97334047233
   - channels.email.icon: mail
@@ -44,13 +44,6 @@
 
 ---
 
-## section#hours
-
-- hours.title: Working hours
-- hours.value: [TBD]
-- hours.note: We reply to WhatsApp messages and emails sent outside working hours as soon as we can.
-
----
 
 ## section#demo
 

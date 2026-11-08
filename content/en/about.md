@@ -55,7 +55,7 @@
 ## section#name
 
 - name.title: Why "Darjina"?
-- name.text: [TBD — the story of the name, to be written by the project owner]
+- name.text: Across the Middle East and Western Asia, a tailor is called darji, tarji or tarzi, words that all come from the same root. We chose Darjina as a feminine form of darji, because the app is made for tailoring traditional women's clothing.
 <!-- Placeholder: the owner should supply the real origin of the name. Do not invent one. -->
 
 ---

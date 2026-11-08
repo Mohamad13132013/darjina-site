@@ -28,7 +28,7 @@
   - channels.phone.icon: phone
     channels.phone.title: الهاتف
     channels.phone.value: +973 3404 7233
-    channels.phone.text: اتصل بنا خلال ساعات العمل.
+    channels.phone.text: اتصل بنا مباشرة.
     channels.phone.cta: اتصل الآن
     channels.phone.href: tel:+97334047233
   - channels.email.icon: mail
@@ -44,13 +44,6 @@
 
 ---
 
-## section#hours
-
-- hours.title: ساعات العمل
-- hours.value: [يُحدَّد]
-- hours.note: رسائل واتساب والبريد خارج ساعات العمل نرد عليها في أقرب وقت.
-
----
 
 ## section#demo
 

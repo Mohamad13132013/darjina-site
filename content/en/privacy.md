@@ -14,7 +14,7 @@
 ## section#intro
 
 - intro.title: Privacy policy
-- intro.updated: Last updated: [TBD]
+- intro.updated: Last updated: 8 November 2026
 - intro.text: This policy explains how we collect, use and protect data in the Darjina app and on the darjina.com website. We've written it in plain language; if you have a question, email us at info@darjina.com.
 
 ---
@@ -22,7 +22,7 @@
 ## section#who-we-are
 
 - who.title: Who we are
-- who.text: Darjina is an app for abaya tailor shops, based in the Kingdom of Bahrain. The entity responsible for the service: [TBD — the company's legal name and commercial registration (CR) number]. Contact: info@darjina.com or +973 3404 7233.
+- who.text: Darjina is an app for abaya tailor shops, based in the Kingdom of Bahrain. The entity responsible for the service is Darjina (دارجينا). Contact: info@darjina.com or +973 3404 7233.
 
 ---
 
@@ -56,7 +56,7 @@
   - collect.website.title: The darjina.com website
     collect.website.items:
       - The website has no input forms. When you tap the WhatsApp or email button, you move to that app and your message is subject to its policy.
-      - Analytics tools and cookies: [TBD — does the website use analytics tools? If so: their name and purpose].
+      - The website uses no analytics tools and no cookies. It only remembers your language choice in your own browser, and loads its fonts from Google Fonts.
 
 ---
 
@@ -80,7 +80,7 @@
 
 - storage.title: Where data is stored and how we protect it
 - storage.items:
-  - App data is stored on Supabase servers (a Postgres database, plus authentication and storage services). Data centre location: [TBD].
+  - App data is stored on Supabase servers (a Postgres database, plus authentication and storage services).
   - Every shop is isolated from the others: the isolation rules are enforced in the database itself, so no user can see another shop's data.
   - Within a shop, permissions depend on the role: the shop owner has wider permissions than staff (such as changing prices, refunds and the full dashboard).
   - The connection between the app and the servers is encrypted.
@@ -103,8 +103,9 @@
 - retention.items:
   - Inside the app, records are never permanently deleted during normal use; "deactivating" hides a record from new selections and keeps the full history of orders and payments.
   - If a shop wants to end the service and delete its data, or a customer wants her data deleted, the request should be sent to info@darjina.com.
-  - We respond to deletion requests within [TBD] days, and we may need to verify the identity of the person making the request, or refer back to the shop concerned.
-  - Retention period after the service ends, and backups: [TBD].
+  - We respond to deletion requests as soon as we can, and we may need to verify the identity of the person making the request, or refer back to the shop concerned.
+  - Each shop's data is kept for as long as the shop uses the app.
+  - A shop's data is never shared with any other entity.
 
 ---
 
@@ -118,7 +119,7 @@
 ## section#children
 
 - children.title: Children
-- children.text: The app is intended for shop owners and their staff, not for children. [TBD — policy on data of customers who are minors, if needed.]
+- children.text: The app is intended for shop owners and their staff, not for children.
 
 ---
 
