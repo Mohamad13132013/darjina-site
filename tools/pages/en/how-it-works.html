@@ -1,0 +1,96 @@
+<!--meta
+title: How Darjina works | From your customer's arrival to abaya delivery
+description: An order's journey in Darjina, step by step: mobile number search, measurements, receipt, deposit, tracking, through to handing the abaya to your customer.
+-->
+<section class="page-hero" id="intro" aria-labelledby="page-title">
+  <img class="hero-mark" src="/assets/img/mark.webp" width="390" height="400" alt="" aria-hidden="true">
+  <div class="wrap">
+    <h1 id="page-title">From the counter to delivery day</h1>
+    <p class="lead">This is how an abaya order moves through Darjina, from the moment your customer walks in until she collects her abaya.</p>
+    <ol class="journey" aria-label="Timeline showing the stages of an order in Darjina, from reception to delivery">
+      <li><a href="#arrive" aria-label="1. Your customer arrives… type her number">{{icon:search}}<span>1</span></a></li>
+      <li><a href="#measure" aria-label="2. Measurements on the abaya picture">{{icon:ruler}}<span>2</span></a></li>
+      <li><a href="#receipt" aria-label="3. Receipt details">{{icon:receipt}}<span>3</span></a></li>
+      <li><a href="#deposit" aria-label="4. The deposit">{{icon:wallet}}<span>4</span></a></li>
+      <li><a href="#share" aria-label="5. The receipt on WhatsApp">{{icon:share}}<span>5</span></a></li>
+      <li><a href="#follow" aria-label="6. Tracking while it's being sewn">{{icon:scissors}}<span>6</span></a></li>
+      <li><a href="#deliver" aria-label="7. Delivery">{{icon:package}}<span>7</span></a></li>
+    </ol>
+  </div>
+</section>
+
+<section class="section" id="steps" aria-label="Steps" style="padding-block-start:40px">
+  <div class="wrap how-layout">
+    <ol class="timeline">
+      <li id="arrive" class="reveal"><span class="step-num">1</span><div class="t-body">
+        <h2>Your customer arrives… type her number</h2>
+        <p>On the home screen, type your customer's mobile number. If she's registered with your shop, she appears as you type and you select her. If she's new, you add her name and number with the country code, and she's created in the same step.</p>
+        <p class="tip">The search covers your shop's customers only.</p>
+      </div></li>
+      <li id="measure" class="reveal"><span class="step-num">2</span><div class="t-body">
+        <h2>Measurements on the abaya picture</h2>
+        <p>If your customer has earlier measurements, they appear ready for you to review or update. If she's new, you enter each measurement in its place on the picture, in centimetres: length, shoulder, bust, waist, hips, sleeve and armhole.</p>
+        <p class="tip">Old measurements are never erased; they stay in her history.</p>
+      </div></li>
+      <li id="receipt" class="reveal"><span class="step-num">3</span><div class="t-body">
+        <h2>Receipt details</h2>
+        <p>The price, number of pieces, order description and expected delivery date, which the app suggests based on your shop's completion time. The receipt number is assigned automatically.</p>
+      </div></li>
+      <li id="deposit" class="reveal"><span class="step-num">4</span><div class="t-body">
+        <h2>The deposit</h2>
+        <p>Record what your customer paid today. The app calculates the balance instantly and saves the payment with its date, branch and who received it.</p>
+      </div></li>
+      <li id="share" class="reveal"><span class="step-num">5</span><div class="t-body">
+        <h2>The receipt on WhatsApp</h2>
+        <p>One tap creates a PDF receipt with your shop's logo, name and number, sent to your customer on WhatsApp or any app you choose. The receipt shows only her name and mobile number.</p>
+      </div></li>
+      <li id="follow" class="reveal"><span class="step-num">6</span><div class="t-body">
+        <h2>Tracking while it's being sewn</h2>
+        <p>The order appears in the orders list by delivery date. The shop owner can assign it to a tailor. If your customer comes back with another payment, it's recorded in the receipt's history. When the work is finished, the order is marked "Completed" with the actual completion date.</p>
+        <p class="tip">Late orders and orders due today show up on the owner dashboard.</p>
+      </div></li>
+      <li id="deliver" class="reveal"><span class="step-num">7</span><div class="t-body">
+        <h2>Delivery</h2>
+        <p>Your customer collects her abaya; you record the final payment and the "Paid in full" badge appears. Then you change the status to "Delivered". If a balance remains, the order can still be delivered after a confirmation message, and the balance stays visible.</p>
+      </div></li>
+    </ol>
+    <aside class="how-aside" aria-hidden="true">
+      {{> mock-measure}}
+      {{> mock-payments}}
+    </aside>
+  </div>
+</section>
+
+<section class="section section--tint" id="exceptions" aria-labelledby="exc-title">
+  <div class="wrap">
+    <div class="section-head"><h2 id="exc-title">And if something changes?</h2></div>
+    <div class="cards cards--4">
+      <article class="card reveal"><span class="icon-badge">{{icon:cancel}}</span><h3>Cancelling an order</h3><p>An order is cancelled with a reason. Staff can cancel a pending order; the shop owner can also cancel a completed one and can restore a cancelled order. A delivered order cannot be cancelled.</p></article>
+      <article class="card reveal"><span class="icon-badge">{{icon:tag}}</span><h3>Changing the price</h3><p>The shop owner changes the price with a reason, and the change is kept in the history. The price can never be lower than the amount already paid.</p></article>
+      <article class="card reveal"><span class="icon-badge">{{icon:refund}}</span><h3>Refunding money</h3><p>The shop owner records a refund, or reverses a payment entered by mistake, as a new entry, so the history stays complete and clear.</p></article>
+      <article class="card reveal"><span class="icon-badge">{{icon:alert}}</span><h3>A status set by mistake</h3><p>Status never moves backwards on its own; the shop owner corrects it when needed.</p></article>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="end-of-day" aria-labelledby="eod-title">
+  <div class="wrap">
+    <div class="eod">
+      <span class="icon-badge">{{icon:moon}}</span>
+      <div><h2 id="eod-title">And at the end of the day</h2><p>The shop owner opens the dashboard to see today's collections, balances due and late orders, and sends the day's summary on WhatsApp. Staff see in "My day" what they recorded today in their branch.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="final-cta" aria-labelledby="cta-title" style="padding-block-start:0">
+  <div class="wrap">
+    <div class="cta-band">
+      <img class="mark-bg" src="/assets/img/mark.webp" width="390" height="400" alt="" loading="lazy">
+      <div><h2 id="cta-title">Try the journey yourself</h2><p>We'll walk you through these steps on your phone in a short demo.</p></div>
+      <div class="btn-row">
+        <a class="btn btn--light" href="{{wa}}">{{icon:chat}}Request a demo</a>
+        <a class="btn btn--ghost-dark" href="{{link:features}}">See all features</a>
+      </div>
+    </div>
+  </div>
+</section>

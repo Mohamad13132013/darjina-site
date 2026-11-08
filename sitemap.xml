@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <url>
+    <loc>https://darjina.com/</loc>
+    <lastmod>2026-11-07</lastmod>
+    <priority>1.0</priority>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://darjina.com/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://darjina.com/en/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://darjina.com/"/>
+  </url>
+  <url>
+    <loc>https://darjina.com/en/</loc>
+    <lastmod>2026-11-07</lastmod>
+    <priority>1.0</priority>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://darjina.com/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://darjina.com/en/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://darjina.com/"/>
+  </url>
+  <url>
+    <loc>https://darjina.com/features/</loc>
+    <lastmod>2026-11-07</lastmod>
+    <priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://darjina.com/features/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://darjina.com/en/features/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://darjina.com/features/"/>
+  </url>
+  <url>
+    <loc>https://darjina.com/en/features/</loc>
+    <lastmod>2026-11-07</lastmod>
+    <priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://darjina.com/features/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://darjina.com/en/features/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://darjina.com/features/"/>
+  </url>
+  <url>
+    <loc>https://darjina.com/how-it-works/</loc>
+    <lastmod>2026-11-07</lastmod>
+    <priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://darjina.com/how-it-works/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://darjina.com/en/how-it-works/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://darjina.com/how-it-works/"/>
+  </url>
+  <url>
+    <loc>https://darjina.com/en/how-it-works/</loc>
+    <lastmod>2026-11-07</lastmod>
+    <priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://darjina.com/how-it-works/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://darjina.com/en/how-it-works/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://darjina.com/how-it-works/"/>
+  </url>
+  <url>
+    <loc>https://darjina.com/about/</loc>
+    <lastmod>2026-11-07</lastmod>
+    <priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://darjina.com/about/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://darjina.com/en/about/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://darjina.com/about/"/>
+  </url>
+  <url>
+    <loc>https://darjina.com/en/about/</loc>
+    <lastmod>2026-11-07</lastmod>
+    <priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://darjina.com/about/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://darjina.com/en/about/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://darjina.com/about/"/>
+  </url>
+  <url>
+    <loc>https://darjina.com/contact/</loc>
+    <lastmod>2026-11-07</lastmod>
+    <priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://darjina.com/contact/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://darjina.com/en/contact/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://darjina.com/contact/"/>
+  </url>
+  <url>
+    <loc>https://darjina.com/en/contact/</loc>
+    <lastmod>2026-11-07</lastmod>
+    <priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://darjina.com/contact/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://darjina.com/en/contact/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://darjina.com/contact/"/>
+  </url>
+  <url>
+    <loc>https://darjina.com/privacy/</loc>
+    <lastmod>2026-11-07</lastmod>
+    <priority>0.3</priority>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://darjina.com/privacy/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://darjina.com/en/privacy/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://darjina.com/privacy/"/>
+  </url>
+  <url>
+    <loc>https://darjina.com/en/privacy/</loc>
+    <lastmod>2026-11-07</lastmod>
+    <priority>0.3</priority>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://darjina.com/privacy/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://darjina.com/en/privacy/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://darjina.com/privacy/"/>
+  </url>
+</urlset>

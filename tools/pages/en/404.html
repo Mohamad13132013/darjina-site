@@ -1,0 +1,22 @@
+<!--meta
+title: Page not found | Darjina
+description: The page you're looking for doesn't exist. Go back to the home page or get in touch with Darjina.
+-->
+<section class="notfound" id="not-found" aria-labelledby="nf-title">
+  <div class="wrap wrap--narrow">
+    <div role="img" aria-label="A measuring tape shaped like a question mark">{{> tape-svg}}</div>
+    <p class="code">404</p>
+    <h1 id="nf-title">Looks like this page went missing… just like a paper receipt!</h1>
+    <p class="lead">The link is wrong or the page has moved. Try one of these pages:</p>
+    <ul class="nf-links">
+      <li><a href="{{link:home}}">Home</a></li>
+      <li><a href="{{link:features}}">Features</a></li>
+      <li><a href="{{link:how-it-works}}">How it works</a></li>
+      <li><a href="{{link:contact}}">Contact us</a></li>
+    </ul>
+    <div class="btn-row">
+      <a class="btn" href="{{link:home}}">Back to home</a>
+      <a class="btn btn--ghost" href="{{wa}}">{{icon:chat}}Chat with us on WhatsApp</a>
+    </div>
+  </div>
+</section>

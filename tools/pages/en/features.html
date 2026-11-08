@@ -1,0 +1,191 @@
+<!--meta
+title: Darjina features | Receipts, measurements and payments for abaya shops
+description: Every Darjina feature: receipts by mobile number, measurements on an abaya picture, deposits, payments, order tracking, branches, staff and dashboard.
+-->
+<section class="page-hero" id="intro" aria-labelledby="page-title">
+  <img class="hero-mark" src="/assets/img/mark.webp" width="390" height="400" alt="" aria-hidden="true">
+  <div class="wrap">
+    <h1 id="page-title">Every Darjina feature</h1>
+    <p class="lead">We designed every screen for the counter: your customer is waiting, time is short, and a mistake in a measurement or an amount is costly. Here's what the app offers today, and what's coming.</p>
+    <ul class="subnav">
+      <li><a href="#orders">Orders and receipts</a></li>
+      <li><a href="#measurements">Measurements</a></li>
+      <li><a href="#payments">Payments</a></li>
+      <li><a href="#tracking">Tracking</a></li>
+      <li><a href="#branches-staff">Branches and staff</a></li>
+      <li><a href="#dashboard">Dashboard and reports</a></li>
+      <li><a href="#language-privacy">Language and privacy</a></li>
+      <li><a href="#coming-soon">Coming soon</a></li>
+    </ul>
+  </div>
+</section>
+
+<div class="wrap">
+  <section class="group" id="orders" aria-labelledby="orders-title">
+    <div>
+      <div class="group-head"><span class="icon-badge">{{icon:receipt}}</span><h2 id="orders-title">Orders and receipts</h2></div>
+      <p class="lead">From a mobile number to a receipt ready to send.</p>
+      <ul class="ticks">
+        <li>Search by mobile number: your shop's registered customers appear as you type.</li>
+        <li>New customer? She's created on the same screen with her name and mobile number, including the country code.</li>
+        <li>An automatic receipt number organised by year, month and branch, never repeated and never changed.</li>
+        <li>Price, number of pieces, description and expected delivery date; the date is suggested automatically from the completion time your shop sets.</li>
+        <li>A PDF receipt with your shop's logo, name and number, shared on WhatsApp or any other app.</li>
+        <li>The receipt always shows the order's current status, and prints only your customer's name and mobile number.</li>
+        <li>Customer profile: all her receipts and measurements in one place.</li>
+      </ul>
+    </div>
+    <div class="group-visual screens screens--pair">
+      {{> mock-search}}
+      {{> mock-share}}
+    </div>
+  </section>
+
+  <section class="group group--flip" id="measurements" aria-labelledby="measurements-title">
+    <div>
+      <div class="group-head"><span class="icon-badge">{{icon:ruler}}</span><h2 id="measurements-title">Measurements on the abaya picture</h2></div>
+      <p class="lead">Every measurement in its place, so the sleeve never gets mixed up with the shoulder.</p>
+      <ul class="ticks">
+        <li>Measurements are entered directly on the abaya drawing, in centimetres.</li>
+        <li>Available points: full length, upper length, sleeve length, sleeve length from the neck, shoulder width, bust, waist, hips, sleeve width and armhole.</li>
+        <li>Your customer's latest set of measurements is used automatically for her next order.</li>
+        <li>When new measurements are saved, the old ones stay in her history.</li>
+        <li>Every receipt stays linked to the measurements it was tailored on, even if the measurements change later.</li>
+      </ul>
+    </div>
+    <div class="group-visual">{{> mock-measure}}</div>
+  </section>
+
+  <section class="group" id="payments" aria-labelledby="payments-title">
+    <div>
+      <div class="group-head"><span class="icon-badge">{{icon:wallet}}</span><h2 id="payments-title">Deposits and payments</h2></div>
+      <p class="lead">Every dinar accounted for: when it was paid, where, and who received it.</p>
+      <ul class="ticks">
+        <li>Record the deposit when the order is opened, then part payments until it's settled.</li>
+        <li>Enter the amount received, or the balance left after payment, and the app works out the rest.</li>
+        <li>A full payment history for every receipt: amount, date, branch, payment method (optional), note, and who recorded it.</li>
+        <li>The balance is calculated automatically and never goes below zero, and a "Paid in full" badge appears when nothing is left to pay.</li>
+        <li>Payments are never edited or deleted; the shop owner corrects them with a refund or reversal entry.</li>
+        <li>Only the shop owner can change the price, with a reason, and the change is kept: old price, new price, who changed it and when. The price can never drop below the amount already paid.</li>
+        <li>Each receipt is in the shop's currency at the time it was created, and amounts are shown with the right number of decimal places for each currency.</li>
+      </ul>
+    </div>
+    <div class="group-visual">{{> mock-payments}}</div>
+  </section>
+
+  <section class="group group--flip" id="tracking" aria-labelledby="tracking-title">
+    <div>
+      <div class="group-head"><span class="icon-badge">{{icon:timeline}}</span><h2 id="tracking-title">Order tracking to delivery</h2></div>
+      <p class="lead">Know where every order is, and when it's due.</p>
+      <ul class="ticks">
+        <li>Clear statuses: Pending → Completed → Delivered.</li>
+        <li>Status only moves forward; the shop owner can correct it if a mistake is made.</li>
+        <li>Cancel an order with a reason: staff can cancel a pending order, the shop owner can also cancel a completed one and can restore a cancelled order.</li>
+        <li>An order can be delivered with a balance still owed, after a confirmation message.</li>
+        <li>The orders list is sorted by delivery date and shows open and ready orders by default.</li>
+        <li>Filter by status and branch, and search by receipt number, mobile number or customer name.</li>
+        <li>A full history for every receipt: payments, price changes and status changes.</li>
+      </ul>
+    </div>
+    <div class="group-visual">{{> mock-list}}</div>
+  </section>
+
+  <section class="group group--wide" id="branches-staff" aria-labelledby="branches-title">
+    <div>
+      <div class="group-head"><span class="icon-badge">{{icon:users}}</span><h2 id="branches-title">Branches and staff</h2></div>
+      <p class="lead">One shop or several branches, just as easy.</p>
+      <ul class="ticks ticks--cols">
+        <li>Add your shop's branches; each branch has a fixed number that appears in its receipt numbers.</li>
+        <li>The shop owner creates staff accounts and sets their passwords personally; there is no self sign-up.</li>
+        <li>Sign in with email and password, with password recovery by a code sent to your email, and password changes from inside the app.</li>
+        <li>Staff see their own branch by default and can switch; the shop owner sees all branches.</li>
+        <li>Deactivating a branch or a staff member erases nothing; they disappear from new selections and stay in the records.</li>
+        <li>Shop settings: currency, country code, default completion time, language and time zone.</li>
+        <li>Shop profile: name, phone, commercial registration (CR) and logo, which are what appear on the receipt.</li>
+      </ul>
+    </div>
+  </section>
+</div>
+
+<section class="section section--dark dash" id="dashboard" aria-labelledby="dashboard-title">
+  <div class="wrap dash-grid">
+    <div>
+      <div class="group-head"><span class="icon-badge">{{icon:dashboard}}</span><h2 id="dashboard-title">Dashboard and reports</h2></div>
+      <p class="lead" style="margin-block-start:12px">The full picture for the shop owner, and their own figures for each staff member.</p>
+      <h3 class="subhead">{{icon:store}}Owner dashboard</h3>
+      <ul class="ticks" style="margin-block-start:14px">
+        <li>Balances your customers still owe.</li>
+        <li>Late orders, orders due today, and ready orders not yet collected.</li>
+        <li>Money collected by branch, payment method and staff member.</li>
+        <li>Orders taken in the period.</li>
+        <li>Team performance, by name.</li>
+        <li>Control panel: cancellations, refunds and price changes.</li>
+        <li>Customers: new and returning.</li>
+        <li>Trends across days, weeks and months.</li>
+        <li>Assign an order to a tailor, and follow each tailor's workload.</li>
+        <li>Every figure opens the orders, payments or customer profile behind it.</li>
+        <li>Amounts are shown separately for each currency; different currencies are never added together.</li>
+      </ul>
+      <h3 class="subhead">{{icon:download}}Export and daily summary</h3>
+      <ul class="ticks" style="margin-block-start:14px">
+        <li>Export the payments list as CSV and the dashboard as PDF, straight from your phone.</li>
+        <li>A daily summary (text or PDF) for any day you choose, for all branches or a single one, to send on WhatsApp.</li>
+      </ul>
+      <h3 class="subhead">{{icon:user}}For staff: "My day" and my figures</h3>
+      <ul class="ticks" style="margin-block-start:14px">
+        <li>The "My day" panel: her branch's counters and the money she recorded today.</li>
+        <li>Her personal statistics with her rank, and a comparison with the best and lowest performers in the shop, without any names.</li>
+        <li>The comparison only appears when the shop has at least three active colleagues, so no one can be identified.</li>
+      </ul>
+    </div>
+    <div class="dash-visual screens screens--pair">
+      {{> mock-dashboard}}
+      {{> mock-myday}}
+    </div>
+  </div>
+</section>
+
+<div class="wrap">
+  <section class="group group--wide" id="language-privacy" aria-labelledby="lp-title">
+    <div>
+      <div class="group-head"><span class="icon-badge">{{icon:language}}</span><h2 id="lp-title">Language and privacy</h2></div>
+      <p class="lead">Arabic from the ground up, and your shop's data stays your shop's.</p>
+      <ul class="ticks ticks--cols">
+        <li>Arabic first and right-to-left, with a complete English interface.</li>
+        <li>Works in any country: currency and country code are set per shop.</li>
+        <li>An ID number field instead of the Bahraini CPR, to suit any country (CPR, Emirates ID, Iqama…).</li>
+        <li>Each shop's data is isolated from the others, and the isolation is enforced in the database.</li>
+        <li>A customer's mobile number is unique within your shop; the same number in another shop is a separate customer with no link to yours.</li>
+        <li>The receipt never prints the ID number or date of birth.</li>
+        <li>Nothing is permanently deleted; deactivating only hides a record from new selections.</li>
+      </ul>
+      <p style="margin-block-start:22px"><a class="text-link" href="{{link:privacy}}">Read the privacy policy<span class="arrow">{{icon:arrow}}</span></a></p>
+    </div>
+  </section>
+
+  <section class="group group--wide" id="coming-soon" aria-labelledby="soon-title">
+    <div>
+      <span class="badge">Coming soon</span>
+      <h2 id="soon-title" style="margin-block-start:12px">What we're working on</h2>
+      <p class="lead">These features are being planned and are not available yet. We'll announce them when they're ready.</p>
+      <div class="soon-cards">
+        <article class="soon-card"><h3>An order page for your shop</h3><p>A link you add to Instagram or WhatsApp, where your customer can order directly; the request reaches your team to turn into a receipt. Optional, and switched on by the shop owner.</p></article>
+        <article class="soon-card"><h3>Online payment links</h3><p>Send your customer a payment link once her request has become a receipt.</p></article>
+      </div>
+      <p class="note">{{icon:info}}<span>Dates have not been set yet.</span></p>
+    </div>
+  </section>
+</div>
+
+<section class="section" id="final-cta" aria-labelledby="cta-title" style="padding-block-start:24px">
+  <div class="wrap">
+    <div class="cta-band">
+      <img class="mark-bg" src="/assets/img/mark.webp" width="390" height="400" alt="" loading="lazy">
+      <div><h2 id="cta-title">See Darjina with your shop's orders</h2><p>We'll arrange a short demo for you and answer your questions.</p></div>
+      <div class="btn-row">
+        <a class="btn btn--light" href="{{wa}}">{{icon:chat}}Request a demo</a>
+        <a class="btn btn--ghost-dark" href="{{mail}}">{{icon:mail}}Email us</a>
+      </div>
+    </div>
+  </div>
+</section>

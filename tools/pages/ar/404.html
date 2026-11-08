@@ -1,0 +1,22 @@
+<!--meta
+title: الصفحة غير موجودة | درجينة
+description: الصفحة التي تبحث عنها غير موجودة. عد إلى الرئيسية أو تواصل مع درجينة.
+-->
+<section class="notfound" id="not-found" aria-labelledby="nf-title">
+  <div class="wrap wrap--narrow">
+    <div role="img" aria-label="شريط قياس على شكل علامة استفهام">{{> tape-svg}}</div>
+    <p class="code">404</p>
+    <h1 id="nf-title">يبدو أن هذه الصفحة ضاعت… مثل فاتورة ورقية!</h1>
+    <p class="lead">الرابط غير صحيح أو أن الصفحة نُقلت. جرّب إحدى هذه الصفحات:</p>
+    <ul class="nf-links">
+      <li><a href="{{link:home}}">الرئيسية</a></li>
+      <li><a href="{{link:features}}">المزايا</a></li>
+      <li><a href="{{link:how-it-works}}">كيف يعمل</a></li>
+      <li><a href="{{link:contact}}">تواصل معنا</a></li>
+    </ul>
+    <div class="btn-row">
+      <a class="btn" href="{{link:home}}">العودة إلى الرئيسية</a>
+      <a class="btn btn--ghost" href="{{wa}}">{{icon:chat}}كلّمنا على واتساب</a>
+    </div>
+  </div>
+</section>
