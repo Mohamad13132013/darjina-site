@@ -636,11 +636,11 @@ test('order.js never parses text as markup', () => {
   }
 });
 
-test('config: function URL and the Turnstile placeholder, no Supabase key', () => {
+test('config: function URL and the Turnstile site key, no Supabase key', () => {
   const ctx = { window: {} };
   vm.runInNewContext(read('o/config.js'), ctx);
   assert.equal(ctx.window.ORDER_CONFIG.FUNCTION_URL, 'https://xfdrusgoqxohdxjzmucf.supabase.co/functions/v1/online-order');
-  assert.equal(ctx.window.ORDER_CONFIG.TURNSTILE_SITE_KEY, '__TURNSTILE_SITE_KEY__');
+  assert.match(ctx.window.ORDER_CONFIG.TURNSTILE_SITE_KEY, /^0x4[A-Za-z0-9_-]{18,}$/);
   for (const f of ['o/config.js', 'assets/js/order.js', 'o/index.html']) {
     assert.doesNotMatch(read(f), /eyJhbGciOi|sb_publishable_|anon[_-]?key|service_role/i, f);
   }

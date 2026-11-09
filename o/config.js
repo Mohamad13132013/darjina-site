@@ -6,5 +6,5 @@
    Content-Security-Policy, so rebuild after changing it. */
 window.ORDER_CONFIG = {
   FUNCTION_URL: "https://xfdrusgoqxohdxjzmucf.supabase.co/functions/v1/online-order",
-  TURNSTILE_SITE_KEY: "__TURNSTILE_SITE_KEY__"
+  TURNSTILE_SITE_KEY: "0x4AAAAAAF6OMIPsxqPumi5T"
 };
