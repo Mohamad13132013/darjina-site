@@ -145,10 +145,21 @@ Values in `o/config.js`:
   `__TURNSTILE_SITE_KEY__`, the page loads no widget and every send shows "We could not confirm that a
   person sent this request".
 
-Product owner, before pushing this repository (a push publishes darjina.com):
-1. Create the Turnstile widget (hostnames `darjina.com`, `www.darjina.com`), put its **site key** in
-   `o/config.js` (the secret key goes only into the Edge Function secret `TURNSTILE_SECRET_KEY`).
-2. Deploy `online-order` with Verify JWT off and run its checks (main repo `supabase/functions/README.md`).
-3. `python tools/build.py`, `node tools/test_order.mjs`, commit, then `git push darjina-site main`.
-4. Open `https://darjina.com/o/<handle>` and `…/o/?h=<handle>&m=<code>` on a phone; send one test
-   request and reject it in the app.
+Already done (nothing to do): the Turnstile widget exists (hostnames `darjina.com`, `www.darjina.com`),
+its public site key is in `o/config.js` (commit caa72a6) and its secret key is the Edge Function secret
+`TURNSTILE_SECRET_KEY`.
+
+Product owner, release order for this version (ADR-0037 sections 4 and 6 item 5; a push publishes
+darjina.com). Keep this order: the new `online-order` accepts at most 64 KiB per request, so an order
+page cached before the website push that still sends photos gets `413 payload_too_large` (shown as
+"could not be sent") once the function is redeployed.
+1. Main repository: run DB script 11 (`supabase/manual/11_ticket048_po_changes.sql`), then its probe
+   `supabase/scripts/post11-anon-check.ps1 -Mode post11`.
+2. This repository: `python tools/build.py`, `node tools/test_order.mjs`, then (only with the product
+   owner's approval) `git push darjina-site main`.
+3. Redeploy the Edge Functions `daily-summary` and `online-order` with Verify JWT off and run their checks
+   (main repository `supabase/functions/README.md`, "Redeploy after batch 11").
+4. Merge `next` into `main` in the main repository.
+5. On a phone: open `https://darjina.com/o/<handle>` and `…/o/?h=<handle>&m=<code>` (a model link shows
+   its price), an Instagram-only shop (no listed models), and send one test request, then reject it in
+   the app.
