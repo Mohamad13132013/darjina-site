@@ -156,7 +156,7 @@ page cached before the website push that still sends photos gets `413 payload_to
 1. Main repository: run DB script 11 (`supabase/manual/11_ticket048_po_changes.sql`), then its probe
    `supabase/scripts/post11-anon-check.ps1 -Mode post11`.
 2. This repository: `python tools/build.py`, `node tools/test_order.mjs`, then (only with the product
-   owner's approval) `git push darjina-site main`.
+   owner's approval) `git push origin main` (the remote `origin` is the darjina-site repository).
 3. Redeploy the Edge Functions `daily-summary` and `online-order` with Verify JWT off and run their checks
    (main repository `supabase/functions/README.md`, "Redeploy after batch 11").
 4. Merge `next` into `main` in the main repository.
