@@ -404,10 +404,14 @@
     while ((m = re.exec(template)) !== null) {
       if (m.index > at) parts.push({ text: template.slice(at, m.index) });
       const value = vars ? vars[m[1]] : undefined;
-      if (value === undefined || value === null) {
+      // BUG-096: an empty item (null, or {text: null}) is left out; nothing left keeps the placeholder.
+      const items = (Array.isArray(value) ? value : [value]).filter(function (v) {
+        return v !== undefined && v !== null && (typeof v !== 'object' || (v.text !== undefined && v.text !== null));
+      });
+      if (!items.length) {
         parts.push({ text: m[0] });
       } else {
-        (Array.isArray(value) ? value : [value]).forEach(function (v, i) {
+        items.forEach(function (v, i) {
           if (i > 0) parts.push({ text: ' ' });
           parts.push(typeof v === 'object' ? { text: String(v.text), isVar: true, ltr: !!v.ltr }
             : { text: String(v), isVar: true, ltr: false });
@@ -609,6 +613,30 @@
     });
   }
 
+  /** ADR-0036 amendment 2 item 25 (BUG-096): what the confirmation shows, taken when the request is
+   * sent from the document its [payload] was built from (never the document at the answer): the
+   * model's code and name, the branch name, the Instagram link, the customer's name, the language and
+   * the shop's phone for the WhatsApp button. */
+  function confirmSnapshot(v, payload, doc) {
+    const models = (doc && doc.models) || [];
+    const branches = (doc && doc.branches) || [];
+    const code = payload.model_code || null;
+    const m = code ? models.find(function (x) { return x.code === code; }) || null : null;
+    const branch = branches.find(function (b) { return b.id === payload.branch_id; })
+      || (branches.length === 1 ? branches[0] : null);
+    return {
+      kind: v.kind, code: code, name: m ? m.name : null, url: payload.instagram_url || null,
+      branchName: branch ? branch.name : null, customerName: payload.customer_name, lang: payload.language,
+      shopPhone: doc && doc.shop ? doc.shop.phone : null,
+    };
+  }
+
+  /** BUG-096: a document re-read that started when [startSends] sends had begun may replace the
+   * page's document only while no send runs, no request was received and no send began meanwhile. */
+  function rereadApplies(state, startSends) {
+    return !state.sending && !state.confirm && state.sends === startSends;
+  }
+
   /** Amendment 2, item 15: the same id only for a resend of the unchanged form, else a new one. */
   function requestIdFor(last, fp, newId) {
     return last && last.fp === fp ? last.id : newId();
@@ -668,7 +696,7 @@
       lang: 'ar', h: '', m: '', doc: null, view: 'loading',
       kind: null, chosen: null, note: false, photos: [], photoError: null, seq: 0,
       branchId: null, measOpen: false, measMode: 'SHOP', activePoint: null,
-      errors: {}, summary: null, alert: null, sending: false, last: null, confirm: null, sheet: null,
+      errors: {}, summary: null, alert: null, sending: false, sends: 0, last: null, confirm: null, sheet: null,
     };
     let sheetOpener = null;
 
@@ -775,14 +803,16 @@
       return CFG.FUNCTION_URL + '?h=' + encodeURIComponent(st.h) + (st.m ? '&m=' + encodeURIComponent(st.m) : '');
     }
     /** GET the document: 'ok' (st.doc set), 'na', 'error' or 'offline' (no answer). [fresh]: past the
-     * browser cache (W3: re-reads after a refusal or a failing image). */
-    async function fetchDoc(fresh) {
+     * browser cache (W3: re-reads after a refusal or a failing image). [applies] (BUG-096): asked when
+     * the answer arrives; false leaves st.doc as it is and answers 'skipped'. */
+    async function fetchDoc(fresh, applies) {
       let r;
       try {
         r = await fetchJson(fetchFn, pageUrl(), fresh ? { method: 'GET', cache: 'no-store' } : { method: 'GET' }, GET_TIMEOUT_MS);
       } catch (e) {
         return 'offline';
       }
+      if (applies && !applies()) return 'skipped';
       const kind = docResult(r.status, r.body);
       if (kind !== 'ok') return kind;
       st.doc = sanitizeDoc(r.body, win.location.protocol);
@@ -848,9 +878,6 @@
     }
     function modelByCode(code) {
       return st.doc.models.find(function (m) { return m.code === code; }) || null;
-    }
-    function onlyBranch() {
-      return st.doc.branches.length === 1 ? st.doc.branches[0] : null;
     }
 
     // ---- rendering ----
@@ -1121,7 +1148,7 @@
       setChildren($('o-sum-model'), [frag('confirm.summaryModel', { model: model })]);
       $('o-sum-branch').hidden = !c.branchName;
       setChildren($('o-sum-branch'), c.branchName ? [frag('confirm.summaryBranch', { branch: c.branchName })] : []);
-      const link = whatsappLink(st.doc.shop.phone, whatsappText(S, c.lang, {
+      const link = whatsappLink(c.shopPhone, whatsappText(S, c.lang, {
         kind: c.kind === 'pick' ? 'model' : c.kind, code: c.code, name: c.name, url: c.url, customerName: c.customerName,
       }));
       $('o-confirm-wa').hidden = !link;
@@ -1360,6 +1387,7 @@
      */
     async function submit() {
       if (st.sending || !st.doc) return;
+      st.sends += 1;
       setSending(true);
       let show;
       try {
@@ -1396,6 +1424,7 @@
 
     async function send(v) {
       const payload = buildPayload(v, st.doc);
+      const sent = confirmSnapshot(v, payload, st.doc);
       const fp = fingerprint(payload, v.photos.map(function (p) { return p.key; }));
       const id = requestIdFor(st.last, fp, function () { return uuidv4(win.crypto); });
       st.last = { fp: fp, id: id };
@@ -1417,18 +1446,14 @@
         return showAlert;
       }
       bot.reset();
-      return handle(outcome(res.status, res.body), v, payload);
+      return handle(outcome(res.status, res.body), sent);
     }
 
-    /** The answer's effect on the state; answers what to show. */
-    async function handle(o, v, payload) {
+    /** The answer's effect on the state; answers what to show. [sent]: the confirmation snapshot of
+     * what this send sent (BUG-096). */
+    async function handle(o, sent) {
       if (o.kind === 'ok') {
-        const m = payload.model_code ? modelByCode(payload.model_code) : null;
-        const branch = st.doc.branches.find(function (b) { return b.id === payload.branch_id; }) || onlyBranch();
-        st.confirm = {
-          kind: v.kind, code: m ? m.code : null, name: m ? m.name : null, url: payload.instagram_url || null,
-          branchName: branch ? branch.name : null, customerName: payload.customer_name, lang: payload.language,
-        };
+        st.confirm = sent;
         return function () {
           renderShop();
           renderConfirm();
@@ -1483,12 +1508,14 @@
     }
 
     /** W9: a failing image (signed links expire after an hour) re-reads the document, at most once a
-     * minute, never while a request is being sent or after it was received. */
+     * minute, never while a request is being sent or after it was received; an answer that arrives
+     * once a send has begun is dropped (BUG-096: the page never replaces its document during a send). */
     const imageRefresh = createThrottle(IMAGE_REFRESH_MS);
     function onImageError() {
       if (st.view !== 'shop' || st.sending || st.confirm || !imageRefresh(Date.now())) return;
-      fetchDoc(true).then(function (r) {
-        if (st.sending || st.confirm) return;
+      const sends = st.sends;
+      fetchDoc(true, function () { return rereadApplies(st, sends); }).then(function (r) {
+        if (r === 'skipped') return;
         if (r === 'ok') refreshForm();
         else if (r === 'na') showNa();
       });
@@ -1681,6 +1708,7 @@
     docResult: docResult, loadView: loadView, isFramed: isFramed, uuidv4: uuidv4, text: text, fillParts: fillParts,
     fillText: fillText, whatsappText: whatsappText, whatsappLink: whatsappLink, safeUrl: safeUrl, sanitizeDoc: sanitizeDoc,
     validate: validate, afterRefresh: afterRefresh, refusalErrors: refusalErrors, buildPayload: buildPayload,
-    fingerprint: fingerprint, requestIdFor: requestIdFor, outcome: outcome, start: start,
+    fingerprint: fingerprint, requestIdFor: requestIdFor, outcome: outcome, confirmSnapshot: confirmSnapshot,
+    rereadApplies: rereadApplies, start: start,
   };
 }));

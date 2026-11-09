@@ -4,7 +4,9 @@
 // client_request_id rule, error-code mapping, WhatsApp texts), the strings file, the built page and
 // robots/sitemap, and that order.js never parses text as markup. The review fixes of 2026-11-09
 // (ADR-0036 amendment 2, item 21: W1, W4-W6, W8-W10) are tested through their pure helpers; the busy
-// flag (W2), the no-store re-reads (W3) and the page wiring were checked in headless Edge.
+// flag (W2), the no-store re-reads (W3) and the page wiring were checked in headless Edge. Bug fixes
+// 2026-11-09 (amendment 2, items 22 and 25): the root 404.html head previews as the order page
+// (BUG-095); the confirmation snapshot and the re-read gate (BUG-096).
 // Run `python tools/build.py` first.
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -68,6 +70,49 @@ test('404 script encodes what the path carries and ignores other paths', () => {
     assert.equal(r.target, null, p);
     assert.equal(r.hidden, false, p);
   }
+});
+
+// The head of a built page: <title> and every <meta> as "name|property" -> content (entities decoded).
+function headOf(html) {
+  const head = html.slice(0, html.indexOf('</head>'));
+  const unescape = (s) => s.replace(/&quot;/g, '"').replace(/&#x27;/g, "'").replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+  const tags = {};
+  for (const m of head.matchAll(/<meta (?:name|property)="([^"]+)" content="([^"]*)">/g)) tags[m[1]] = unescape(m[2]);
+  return { title: unescape(/<title>([^<]*)<\/title>/.exec(head)[1]), tags };
+}
+const PREVIEW_KEYS = ['description', 'og:title', 'og:description', 'og:url', 'og:image', 'og:image:alt',
+  'twitter:title', 'twitter:description', 'twitter:image'];
+
+test('BUG-095: the root 404.html (path links) previews as the generic order page; its body stays not found', () => {
+  const nf = read('404.html');
+  const page = headOf(nf);
+  const order = headOf(read('o/index.html'));
+  const ar = STRINGS.ar;
+  assert.equal(page.title, ar['meta.title']);
+  assert.equal(page.tags.description, ar['meta.description']);
+  assert.equal(page.tags['og:title'], ar['meta.title']);
+  assert.equal(page.tags['og:description'], ar['meta.description']);
+  assert.equal(page.tags['og:image:alt'], ar['meta.ogImageAlt']);
+  assert.equal(page.tags['twitter:title'], ar['meta.title']);
+  assert.equal(page.tags['twitter:description'], ar['meta.description']);
+  assert.equal(page.tags['og:url'], 'https://darjina.com/o/');
+  for (const k of PREVIEW_KEYS) assert.equal(page.tags[k], order.tags[k], `${k} equals the order page's`);
+  assert.equal(page.title, order.title);
+  assert.equal(page.tags.robots, 'noindex');
+  assert.doesNotMatch(nf.slice(0, nf.indexOf('</head>')), /غير موجودة/, 'no not-found text in the head');
+  // The visible page is still the not-found page, with the forwarder first in <head>.
+  const body = nf.slice(nf.indexOf('<body>'));
+  assert.match(body, /<section class="notfound" id="not-found"/);
+  assert.match(body, /<p class="code">404<\/p>/);
+  assert.match(body, /<h1 id="nf-title">يبدو أن هذه الصفحة ضاعت/);
+  forwardScript();
+  // en/404.html (not the host's 404 page) keeps its own not-found head.
+  const en = headOf(read('en/404.html'));
+  assert.equal(en.title, 'Page not found | Darjina');
+  assert.equal(en.tags['og:title'], 'Page not found | Darjina');
+  assert.equal(en.tags['og:url'], 'https://darjina.com/en/404.html');
+  assert.doesNotMatch(read('en/404.html'), /<script>\(function\(l\)/, 'no forwarder in en/404.html');
 });
 
 // ------------------------------------------------------------------------------------------------
@@ -449,6 +494,43 @@ test('W9: a failing image re-reads the document at most once a minute', () => {
   assert.equal(allow(60999), false);
   assert.equal(allow(61000), true);
   assert.equal(allow(61001), false);
+});
+
+test('BUG-096: the confirmation is the snapshot of what was sent; a re-read never lands during a send', () => {
+  // The document the payload was built from (m3 chosen, Manama) ...
+  const v = Object.assign(base(), { chosen: 'm3', branchId: '22222222-2222-4222-8222-222222222222' });
+  const payload = O.buildPayload(v, DOC);
+  const sent = O.confirmSnapshot(v, payload, DOC);
+  // ... then a re-read without m3, without Manama and with another shop phone: the snapshot keeps them.
+  const later = O.sanitizeDoc({
+    available: true, handle: 'alnoor.abayas', shop: { name: 'عبايات النور', phone: '+97317009999' },
+    branches: [{ id: '11111111-1111-4111-8111-111111111111', name: 'الرفاع' }],
+    models: [{ code: 'm1', name: 'عباية كريب مطرزة' }],
+  }, 'https:');
+  assert.equal(O.confirmSnapshot(v, payload, later).name, null, 'the later document no longer offers m3');
+  assert.deepEqual(sent, {
+    kind: 'pick', code: 'm3', name: 'عباية سوداء كلاسيكية', url: null, branchName: 'المنامة',
+    customerName: 'Reem', lang: 'ar', shopPhone: '+97317001100',
+  });
+  assert.equal(O.whatsappText(STRINGS, sent.lang, { kind: 'model', code: sent.code, name: sent.name, customerName: sent.customerName }),
+    O.fillText(STRINGS.ar['wa.model'], { code: 'm3', name: 'عباية سوداء كلاسيكية', customerName: 'Reem' }));
+  // One branch: its name without a branch_id; photos and Instagram: no model.
+  const one = Object.assign({}, DOC, { branches: [DOC.branches[0]] });
+  const photos = Object.assign(base(), { kind: 'photos', photos: [{ key: 'p1', b64: 'AA==' }] });
+  const snap = O.confirmSnapshot(photos, O.buildPayload(photos, one), one);
+  assert.equal(snap.branchName, 'الرفاع');
+  assert.equal(snap.code, null);
+  assert.equal(snap.name, null);
+  // The model line never throws on an empty item (the page threw `null.text`); nothing left keeps the
+  // placeholder.
+  const parts = O.fillParts('الموديل: {model}', { model: [{ text: 'm3', ltr: true }, null] });
+  assert.deepEqual(parts, [{ text: 'الموديل: ' }, { text: 'm3', isVar: true, ltr: true }]);
+  assert.deepEqual(O.fillParts('{model}', { model: [{ text: null, ltr: true }, null] }), [{ text: '{model}' }]);
+  // A re-read applies only with no send running, none received and none begun since it started.
+  assert.equal(O.rereadApplies({ sending: false, confirm: null, sends: 2 }, 2), true);
+  assert.equal(O.rereadApplies({ sending: true, confirm: null, sends: 3 }, 3), false, 'a send runs');
+  assert.equal(O.rereadApplies({ sending: false, confirm: sent, sends: 3 }, 3), false, 'received');
+  assert.equal(O.rereadApplies({ sending: false, confirm: null, sends: 3 }, 2), false, 'a send began and ended meanwhile');
 });
 
 test('uuid v4 with and without crypto.randomUUID', () => {

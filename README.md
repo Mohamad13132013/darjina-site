@@ -108,6 +108,10 @@ How it works:
   (keeps `?lang=` and the `#fragment`). `/o/index.html` lowercases handle and code, restores the clean
   path with `history.replaceState`, then loads the shop's public document from the Edge Function
   `online-order` (GET) and sends the request (POST). No Supabase key is used.
+- Link previews (ADR-0036 amendment 2 item 22): crawlers do not run the forwarder and get the root
+  `404.html` (HTTP 404) for a path link, so its `<title>`, description, Open Graph and Twitter tags are
+  the order page's generic preview (`meta.*` texts, `og:url` `/o/`); its visible body stays the
+  not-found page. `en/404.html` keeps its own not-found tags. The ad-safe link (HTTP 200) always previews.
 - Files: `tools/pages/o.html` (page source, text ids) -> `o/index.html` (noindex, not in the sitemap,
   `Disallow: /o/` in robots.txt, Content-Security-Policy), `assets/js/order.js` (vanilla, no framework),
   `assets/js/order-strings.js` (texts, generated: `python tools/gen_order_strings.py` reads

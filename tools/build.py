@@ -225,6 +225,16 @@ def head(lang, slug, meta):
     url = DOMAIN + href(lang, slug)
     is404 = slug == "404"
     og_img = DOMAIN + "/assets/img/og-image.jpg"
+    og_alt = s["og_alt"]
+    if is404 and lang == "ar":
+        # ADR-0036 amendment 2 item 22 (BUG-095): the host answers every path link /o/<handle>[/<code>] with
+        # this page (HTTP 404) and crawlers do not run the forwarder, so the title and the Open Graph and
+        # Twitter tags are the order page's generic preview (texts meta.*); the visible body stays not-found.
+        order = order_strings()["ar"]
+        title = html.escape(order["meta.title"], quote=True)
+        desc = html.escape(order["meta.description"], quote=True)
+        og_alt = html.escape(order["meta.ogImageAlt"], quote=True)
+        url = DOMAIN + "/o/"
     lines = [
         "<!doctype html>",
         f'<html lang="{lang}" dir="{s["dir"]}">',
@@ -262,7 +272,7 @@ def head(lang, slug, meta):
         f'<meta property="og:image" content="{og_img}">',
         '<meta property="og:image:width" content="1200">',
         '<meta property="og:image:height" content="630">',
-        f'<meta property="og:image:alt" content="{s["og_alt"]}">',
+        f'<meta property="og:image:alt" content="{og_alt}">',
         f'<meta property="og:locale" content="{s["locale"]}">',
         f'<meta property="og:locale:alternate" content="{s["locale_alt"]}">',
         '<meta name="twitter:card" content="summary_large_image">',
