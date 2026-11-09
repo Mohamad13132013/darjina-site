@@ -118,6 +118,13 @@ How it works:
   `docs/design/_build/web_copy.py` of the main repository; then `python tools/build.py`),
   `assets/css/order.css`, `assets/img/abaya-measurements.svg` (copy of the design asset, inlined),
   `o/config.js`.
+- The model is named by a catalogue model or an Instagram post link; the page never asks for photos and
+  never sends a `photos` key (TICKET-051, ADR-0037 section 1). A shop without listed models shows the
+  Instagram link field alone (no one-option radio), with its own required error (`err.instagramRequired`).
+- Model price (ADR-0037 section 2): card, sheet and chosen-model card show `model.price`
+  ("السعر: 25.000 BHD" / "Price: 25.000 BHD"): `from_price` (the key keeps its name; it means the exact
+  price) in `from_price_currency` with `minor_units`, the ISO code after the amount, both in one LTR
+  isolate. A model without a price (null or 0, possible only before DB batch 11) shows no price line.
 - Owner-written texts are always written as text (`textContent`), never parsed as markup.
 - A new `client_request_id` whenever the form content changes; a resend of the unchanged form (lost
   answer, bot check failed, rate limit) reuses it, with a fresh Turnstile token each time. Switching the
@@ -127,13 +134,16 @@ How it works:
   "not available" too. A failing image (signed links expire after an hour) re-reads the document, at
   most once a minute.
 - Only third-party script: Cloudflare Turnstile. `localStorage` only for the language choice.
-- Test (no browser): `node tools/test_order.mjs` after `python tools/build.py`.
+- Test (no browser): `node tools/test_order.mjs` after `python tools/build.py`. It also compares the
+  strings and the four WhatsApp examples with the main repository's `docs/design/copy-online-order-page.md`
+  (skipped when the website folder is checked out on its own).
 
-Placeholders in `o/config.js`:
+Values in `o/config.js`:
 - `FUNCTION_URL` = `https://xfdrusgoqxohdxjzmucf.supabase.co/functions/v1/online-order` (final; the CSP
   is built from it, so rebuild after a change).
-- `TURNSTILE_SITE_KEY` = `__TURNSTILE_SITE_KEY__`. While it is the placeholder the page loads no widget
-  and every send shows "We could not confirm that a person sent this request".
+- `TURNSTILE_SITE_KEY`: the widget's public site key (set). If it is ever put back to the placeholder
+  `__TURNSTILE_SITE_KEY__`, the page loads no widget and every send shows "We could not confirm that a
+  person sent this request".
 
 Product owner, before pushing this repository (a push publishes darjina.com):
 1. Create the Turnstile widget (hostnames `darjina.com`, `www.darjina.com`), put its **site key** in

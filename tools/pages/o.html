@@ -88,18 +88,11 @@
             <div class="o-choice">
               <label class="o-rc" id="f-kind-pick-row"><input type="radio" name="mkind" value="pick" id="f-kind-pick"><span class="o-dot" aria-hidden="true"></span><span class="o-rc-tx" data-s="form.modelPick"></span></label>
               <div class="o-sub" id="f-pick-panel" hidden></div>
-              <label class="o-rc"><input type="radio" name="mkind" value="photos" id="f-kind-photos"><span class="o-dot" aria-hidden="true"></span><span class="o-rc-tx" data-s="form.modelPhotos"></span></label>
-              <div class="o-sub" id="f-photos-panel" hidden>
-                <div class="o-tiles" id="f-tiles">
-                  <label class="o-tile o-tile--add" id="f-photo-add">{{icon:image}}<span data-s="form.photosAdd"></span><input type="file" id="f-photo-input" accept="image/jpeg,image/png" multiple class="visually-hidden" aria-describedby="f-photos-help f-photos-err"></label>
-                </div>
-                <p class="o-hl" id="f-photos-help" data-s="form.photosHelp"></p>
-                <p class="o-er" id="f-photos-err" hidden></p>
-              </div>
-              <label class="o-rc"><input type="radio" name="mkind" value="insta" id="f-kind-insta"><span class="o-dot" aria-hidden="true"></span><span class="o-rc-tx" data-s="form.modelInstagram"></span></label>
+              <label class="o-rc" id="f-kind-insta-row"><input type="radio" name="mkind" value="insta" id="f-kind-insta"><span class="o-dot" aria-hidden="true"></span><span class="o-rc-tx" data-s="form.modelInstagram"></span></label>
               <div class="o-sub o-f" id="f-insta-panel" hidden>
                 <label class="o-lab" for="f-insta" data-s="form.instagramLabel"></label>
-                <input class="o-in" id="f-insta" type="url" inputmode="url" dir="ltr" autocomplete="off" maxlength="300" data-s-attr="placeholder=form.instagramHint" aria-describedby="f-insta-err">
+                <input class="o-in" id="f-insta" type="url" inputmode="url" dir="ltr" autocomplete="off" maxlength="300" data-s-attr="placeholder=form.instagramHint" aria-describedby="f-insta-help f-insta-err">
+                <p class="o-hl" id="f-insta-help" data-s="form.instagramHelp"></p>
                 <p class="o-er" id="f-insta-err" hidden></p>
               </div>
             </div>
@@ -200,7 +193,6 @@
 <template id="ic-pin">{{icon:map-pin}}</template>
 <template id="ic-check">{{icon:check}}</template>
 <template id="ic-link">{{icon:link}}</template>
-<template id="ic-close">{{icon:close}}</template>
 <template id="ic-alert">{{icon:alert}}</template>
 <template id="ic-info">{{icon:info}}</template>
 <template id="ic-chat">{{icon:chat}}</template>

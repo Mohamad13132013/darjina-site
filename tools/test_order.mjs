@@ -6,11 +6,14 @@
 // (ADR-0036 amendment 2, item 21: W1, W4-W6, W8-W10) are tested through their pure helpers; the busy
 // flag (W2), the no-store re-reads (W3) and the page wiring were checked in headless Edge. Bug fixes
 // 2026-11-09 (amendment 2, items 22 and 25): the root 404.html head previews as the order page
-// (BUG-095); the confirmation snapshot and the re-read gate (BUG-096).
+// (BUG-095); the confirmation snapshot and the re-read gate (BUG-096). TICKET-051 (ADR-0037 sections
+// 1, 2, 5): no customer photos anywhere (no file input, no photos key, no photo texts), the Instagram
+// link field alone for a shop without listed models, the exact model price ("Price: 25.000 BHD", never
+// "From"), and the strings and WhatsApp examples equal to the web copy deck of the main repository.
 // Run `python tools/build.py` first.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -26,6 +29,13 @@ const STRINGS = (() => {
 })();
 const ch = (...codes) => String.fromCharCode(...codes);
 const NBSP = ch(0xa0);
+// The web copy deck of the main repository (this repository sits in its `website/` folder).
+const DECK_FILE = join(ROOT, '..', 'docs', 'design', 'copy-online-order-page.md');
+const DECK = existsSync(DECK_FILE) ? readFileSync(DECK_FILE, 'utf8').replace(/\r\n/g, '\n') : null;
+const NO_DECK = DECK ? false : `copy deck not found at ${DECK_FILE}`;
+/** Ids removed by ADR-0037 (copy deck "Changes on 2026-11-09"). */
+const REMOVED_IDS = ['form.modelPhotos', 'form.photosAdd', 'form.photosHelp', 'form.photoRemove', 'form.photoPreparing',
+  'err.photoMax', 'err.photoType', 'err.photoLarge', 'wa.photos', 'model.from'];
 
 // ------------------------------------------------------------------------------------------------
 // 404.html forwarding (ADR-0036 section 2)
@@ -182,7 +192,7 @@ const DOC = O.sanitizeDoc({
 }, 'https:');
 
 const base = () => ({
-  name: ' Reem ', cc: '+973', phone: '36001122', kind: 'pick', chosen: 'm1', photos: [], insta: '',
+  name: ' Reem ', cc: '+973', phone: '36001122', kind: 'pick', chosen: 'm1', insta: '',
   branchId: '11111111-1111-4111-8111-111111111111', measMode: 'SHOP', meas: {}, pieces: '1',
   notes: 'Size M, black', date: '', contact: 'WHATSAPP', lang: 'ar',
 });
@@ -219,12 +229,15 @@ test('a complete request with a preselected model (US-ONL-002)', () => {
   });
 });
 
-test('payload: own photos, Instagram link, one branch, date, entered measurements', () => {
-  const photos = { ...base(), kind: 'photos', photos: [{ key: 1, b64: 'AAA=' }, { key: 2, b64: 'BBB=' }], notes: '  ' };
-  const p1 = O.buildPayload(photos, DOC);
-  assert.deepEqual(p1.photos, [{ content_type: 'image/jpeg', data_base64: 'AAA=' }, { content_type: 'image/jpeg', data_base64: 'BBB=' }]);
+test('payload: Instagram link, one branch, date, entered measurements; never photos', () => {
+  // A stale form value from an old page state (ADR-0037): no photos key, no model, a model error.
+  const stale = { ...base(), kind: 'photos', photos: [{ key: 1, b64: 'AAA=' }], notes: '  ' };
+  const p1 = O.buildPayload(stale, DOC);
+  assert.equal('photos' in p1, false, 'the body never carries photos');
   assert.equal('model_code' in p1, false);
+  assert.equal('instagram_url' in p1, false);
   assert.equal('notes' in p1, false);
+  assert.equal(O.validate(stale, DOC).model.id, 'err.modelRequired');
 
   const insta = { ...base(), kind: 'insta', insta: ' https://www.instagram.com/p/C7def/?igsh=abc ', lang: 'en', contact: 'CALL' };
   const p2 = O.buildPayload(insta, DOC);
@@ -260,8 +273,9 @@ test('validation mirrors BR-108 (negative cases)', () => {
   assert.equal(e({ chosen: null }).model.id, 'err.modelRequired');
   assert.equal(e({ chosen: 'm2' }).model.id, 'err.modelRequired');
   assert.equal(e({ kind: null }).model.id, 'err.modelRequired');
-  assert.equal(e({ kind: 'photos', photos: [] }).model.id, 'err.modelRequired');
-  assert.equal(e({ kind: 'insta', insta: '' }).model.id, 'err.modelRequired');
+  assert.equal(e({ kind: 'photos' }).model.id, 'err.modelRequired', 'no photos choice any more');
+  assert.equal(e({ kind: 'insta', insta: '' }).model.id, 'err.modelRequired', 'with models: the choice fieldset error');
+  assert.equal(e({ kind: 'insta', insta: '' }).insta, undefined);
   assert.equal(e({ kind: 'insta', insta: 'https://www.tiktok.com/@x/video/1' }).insta.id, 'err.instagramInvalid');
   assert.equal(e({ branchId: null }).branch.id, 'err.branchRequired');
   assert.equal(e({ branchId: '33333333-3333-4333-8333-333333333333' }).branch.id, 'err.branchRequired');
@@ -301,7 +315,7 @@ test('Instagram link check as the server (private.online_instagram_url)', () => 
 test('the same id only for a resend of the unchanged form', () => {
   let n = 0;
   const newId = () => `id-${++n}`;
-  const fp = (v, keys) => O.fingerprint(O.buildPayload(v, DOC), keys);
+  const fp = (v) => O.fingerprint(O.buildPayload(v, DOC));
   const v = base();
   let last = null;
   const id1 = O.requestIdFor(last, fp(v), newId);
@@ -314,11 +328,9 @@ test('the same id only for a resend of the unchanged form', () => {
   assert.notEqual(O.requestIdFor(last, fp(base()), newId), id2, 'changed back: content differs from the last send');
   assert.equal(O.requestIdFor(null, fp(v), newId), 'id-4');
 
-  const ph = { ...base(), kind: 'photos', photos: [{ key: 1, b64: 'AAA=' }] };
-  const fpA = fp(ph, [1]);
-  assert.equal(fpA.includes('AAA='), false, 'photo data is not part of the fingerprint');
-  assert.notEqual(fpA, fp({ ...ph, photos: [{ key: 7, b64: 'AAA=' }] }, [7]), 'removed and added again = new content');
-  assert.equal(fpA, fp(ph, [1]));
+  const link = { ...base(), kind: 'insta', insta: 'https://www.instagram.com/p/C7def/' };
+  assert.notEqual(fp(link), fp({ ...link, insta: 'https://www.instagram.com/p/C7xyz/' }), 'another link = new content');
+  assert.equal(fp(link), fp({ ...link, insta: ' https://www.instagram.com/p/C7def/?igsh=1 ' }), 'the same link as sent');
   for (const patch of [{ phone: '36001123' }, { cc: '+966', phone: '551234567' }, { kind: 'pick', chosen: 'm3' }, { branchId: DOC.branches[1].id },
     { measMode: 'LAST' }, { pieces: '2' }, { date: '2026-12-01' }, { contact: 'CALL' }, { name: 'Reema' }]) {
     assert.notEqual(fp({ ...base(), ...patch }), fp(base()), JSON.stringify(patch));
@@ -330,11 +342,12 @@ test('W4: the page language is sent but is not part of the fingerprint', () => {
   const en = O.buildPayload({ ...base(), lang: 'en' }, DOC);
   assert.equal(ar.language, 'ar');
   assert.equal(en.language, 'en', 'still sent');
-  assert.equal(O.fingerprint(en, []), O.fingerprint(ar, []), 'switching the language before a resend keeps the id');
-  const last = { fp: O.fingerprint(ar, []), id: 'id-1' };
-  assert.equal(O.requestIdFor(last, O.fingerprint(en, []), () => 'id-2'), 'id-1');
+  assert.equal(O.fingerprint(en), O.fingerprint(ar), 'switching the language before a resend keeps the id');
+  const last = { fp: O.fingerprint(ar), id: 'id-1' };
+  assert.equal(O.requestIdFor(last, O.fingerprint(en), () => 'id-2'), 'id-1');
   // only the payload's own language field is left out
-  assert.notEqual(O.fingerprint({ ...ar, notes: 'x' }, []), O.fingerprint(ar, []));
+  assert.notEqual(O.fingerprint({ ...ar, notes: 'x' }), O.fingerprint(ar));
+  assert.notEqual(O.fingerprint({ ...ar, measurements: { language: 'x' } }), O.fingerprint({ ...ar, measurements: { language: 'y' } }));
 });
 
 // ------------------------------------------------------------------------------------------------
@@ -436,10 +449,11 @@ test('W8: after a re-fetch the page checks again; one branch left, no models lef
 
   const noModels = { ...DOC, models: [] };
   const kept = O.afterRefresh(form, noModels);
-  assert.deepEqual(kept, { kind: null, chosen: null, branchId: form.branchId, lostModel: true });
+  assert.deepEqual(kept, { kind: 'insta', chosen: null, branchId: form.branchId, lostModel: true }, 'only the link field is left (ADR-0037)');
   const e = O.refusalErrors(O.outcome(400, { error: 'invalid_input' }), { ...base(), kind: kept.kind, chosen: kept.chosen }, noModels, true);
-  assert.deepEqual(Object.keys(e), ['model']);
-  assert.equal(e.model.id, 'err.modelRequired');
+  assert.deepEqual(Object.keys(e), ['insta']);
+  assert.equal(e.insta.id, 'err.instagramRequired');
+  assert.equal(O.afterRefresh({ kind: 'insta', chosen: null, branchId: null }, DOC).kind, 'insta', 'models back: the typed link stays chosen');
   const gone = O.afterRefresh({ kind: 'pick', chosen: 'm1', branchId: null }, { ...DOC, models: [DOC.models[0]] });
   assert.deepEqual(gone, { kind: 'pick', chosen: null, branchId: null, lostModel: true });
   assert.equal(O.refusalErrors({ kind: 'refresh' }, { ...base(), chosen: null }, DOC, true).model.id, 'err.modelRequired');
@@ -452,39 +466,6 @@ test('W8: after a re-fetch the page checks again; one branch left, no models lef
   assert.equal(O.refusalErrors(dateRefusal, { ...base(), date: '2026-11-24' }, DOC, false).date.vars.date.text, '23/11/2026');
   const both = O.refusalErrors(dateRefusal, { ...base(), date: '2026-11-24', phone: '1' }, later, true);
   assert.deepEqual(Object.keys(both), ['phone', 'date'], 'every field error of the page is shown');
-});
-
-test('W5: stored image size, resize options, one photo at a time, error ids', async () => {
-  assert.deepEqual(O.imageSize(new Uint8Array(readFileSync(join(ROOT, 'assets/img/og-image.jpg')))), { width: 1200, height: 630 });
-  assert.deepEqual(O.imageSize(new Uint8Array(readFileSync(join(ROOT, 'assets/img/mark-512.png')))), { width: 512, height: 512 });
-  // APP1 block, fill byte, DHT (C4, not a frame), then SOF2 4000 x 3000
-  const jpg = new Uint8Array([0xff, 0xd8, 0xff, 0xe1, 0x00, 0x04, 0x45, 0x78, 0xff, 0xff, 0xc4, 0x00, 0x03, 0x00,
-    0xff, 0xc2, 0x00, 0x11, 0x08, 0x0b, 0xb8, 0x0f, 0xa0, 0x03]);
-  assert.deepEqual(O.imageSize(jpg), { width: 4000, height: 3000 });
-  assert.equal(O.imageSize(jpg.slice(0, 14)), null, 'size beyond the bytes read');
-  assert.equal(O.imageSize(new Uint8Array([0x47, 0x49, 0x46, 0x38])), null);
-  assert.deepEqual(O.bitmapResize({ width: 4000, height: 3000 }, 1600), { resizeWidth: 1600, resizeQuality: 'high' });
-  assert.deepEqual(O.bitmapResize({ width: 3000, height: 4000 }, 1600), { resizeHeight: 1600, resizeQuality: 'high' });
-  assert.equal(O.bitmapResize({ width: 1600, height: 900 }, 1600), null);
-  assert.equal(O.bitmapResize(null, 1600), null);
-  assert.equal(O.photoErrorId(new Error('type')), 'err.photoType');
-  for (const m of ['memory', 'large', 'other']) assert.equal(O.photoErrorId(new Error(m)), 'err.photoLarge', m);
-
-  const queue = O.createQueue();
-  let active = 0;
-  let most = 0;
-  const order = [];
-  const task = (n, fail) => () => new Promise((resolve, reject) => {
-    active += 1;
-    most = Math.max(most, active);
-    order.push('start ' + n);
-    setTimeout(() => { active -= 1; order.push('end ' + n); (fail ? reject : resolve)(n); }, 5);
-  });
-  const runs = [queue(task(1)), queue(task(2, true)), queue(task(3))];
-  const settled = await Promise.allSettled(runs);
-  assert.equal(most, 1, 'never two photos at once');
-  assert.deepEqual(order, ['start 1', 'end 1', 'start 2', 'end 2', 'start 3', 'end 3']);
-  assert.deepEqual(settled.map((s) => s.status), ['fulfilled', 'rejected', 'fulfilled'], 'a failed photo does not stop the next');
 });
 
 test('W9: a failing image re-reads the document at most once a minute', () => {
@@ -514,11 +495,13 @@ test('BUG-096: the confirmation is the snapshot of what was sent; a re-read neve
   });
   assert.equal(O.whatsappText(STRINGS, sent.lang, { kind: 'model', code: sent.code, name: sent.name, customerName: sent.customerName }),
     O.fillText(STRINGS.ar['wa.model'], { code: 'm3', name: 'عباية سوداء كلاسيكية', customerName: 'Reem' }));
-  // One branch: its name without a branch_id; photos and Instagram: no model.
+  // One branch: its name without a branch_id; an Instagram link: no model.
   const one = Object.assign({}, DOC, { branches: [DOC.branches[0]] });
-  const photos = Object.assign(base(), { kind: 'photos', photos: [{ key: 'p1', b64: 'AA==' }] });
-  const snap = O.confirmSnapshot(photos, O.buildPayload(photos, one), one);
+  const link = Object.assign(base(), { kind: 'insta', insta: 'https://www.instagram.com/reel/C9xyz/' });
+  const snap = O.confirmSnapshot(link, O.buildPayload(link, one), one);
   assert.equal(snap.branchName, 'الرفاع');
+  assert.equal(snap.kind, 'insta');
+  assert.equal(snap.url, 'https://www.instagram.com/reel/C9xyz/');
   assert.equal(snap.code, null);
   assert.equal(snap.name, null);
   // The model line never throws on an empty item (the page threw `null.text`); nothing left keeps the
@@ -574,18 +557,109 @@ test('answers mapped to the page states', () => {
 // ------------------------------------------------------------------------------------------------
 // Texts, formats, WhatsApp
 
-test('amounts, dates, sizes, magic bytes', () => {
+test('amounts and dates', () => {
   assert.equal(O.formatAmount(35, 3, 'BHD'), '35.000' + NBSP + 'BHD');
   assert.equal(O.formatAmount('25.5', 3, 'BHD'), '25.500' + NBSP + 'BHD');
   assert.equal(O.formatAmount(120, 2, 'SAR'), '120.00' + NBSP + 'SAR');
   assert.equal(O.formatAmount(null, 3, 'BHD'), null);
   assert.equal(O.formatDate('2026-11-23'), '23/11/2026');
   assert.equal(O.formatDate('23/11/2026'), '');
-  assert.deepEqual(O.shrinkSize(4000, 3000, 1600), { width: 1600, height: 1200 });
-  assert.deepEqual(O.shrinkSize(900, 1200, 1600), { width: 900, height: 1200 });
-  assert.equal(O.sniffImage(new Uint8Array([0xff, 0xd8, 0xff, 0xe0])), 'jpg');
-  assert.equal(O.sniffImage(new Uint8Array([0x89, 0x50, 0x4e, 0x47])), 'png');
-  assert.equal(O.sniffImage(new Uint8Array([0x47, 0x49, 0x46, 0x38])), null);
+});
+
+test('TICKET-051: exact model price in its currency and decimals, never "From"', () => {
+  // DOC models as sanitized from the public document (from_price keeps its name, ADR-0037 section 2).
+  assert.equal(O.modelPrice(DOC.models[0]), '25.500' + NBSP + 'BHD', 'BHD: 3 decimals');
+  assert.equal(O.modelPrice(DOC.models[1]), '35.000' + NBSP + 'BHD');
+  const sar = O.sanitizeDoc({ models: [{ code: 'k1', name: 'n', from_price: '30.5', from_price_currency: 'SAR', minor_units: 2 }] }, 'https:');
+  assert.equal(O.modelPrice(sar.models[0]), '30.50' + NBSP + 'SAR', 'SAR: 2 decimals (copy deck example)');
+  for (const p of [null, undefined, '', 0, '0', -5, 'abc']) {
+    const m = O.sanitizeDoc({ models: [{ code: 'k', name: 'n', from_price: p, from_price_currency: 'BHD', minor_units: 3 }] }, 'https:').models[0];
+    assert.equal(O.modelPrice(m), null, `no price line for ${JSON.stringify(p)} (possible only before batch 11)`);
+  }
+  // The label: "السعر: 25.500 BHD" / "Price: 25.500 BHD", the amount with its code in one LTR isolate.
+  assert.equal(STRINGS.ar['model.price'], 'السعر: {amount}');
+  assert.equal(STRINGS.en['model.price'], 'Price: {amount}');
+  const amount = { text: O.modelPrice(DOC.models[0]), ltr: true };
+  assert.deepEqual(O.fillParts(STRINGS.ar['model.price'], { amount }), [{ text: 'السعر: ' }, { text: '25.500' + NBSP + 'BHD', isVar: true, ltr: true }]);
+  assert.equal(O.fillText(STRINGS.en['model.price'], { amount }), 'Price: 25.500' + NBSP + 'BHD');
+  const src = read('assets/js/order.js');
+  assert.match(src, /frag\('model\.price', \{ amount: ltr\(amount\) \}\)/, 'the page writes model.price with an LTR amount');
+  assert.match(src, /const amount = modelPrice\(m\);/, 'the price line uses modelPrice');
+  for (const lang of ['ar', 'en']) {
+    for (const [id, v] of Object.entries(STRINGS[lang])) {
+      assert.doesNotMatch(v, /يبدأ من|\bFrom \{amount\}|\bfrom \{amount\}/, `${lang} ${id}: no "From" price`);
+    }
+  }
+  assert.doesNotMatch(src, /model\.from/);
+});
+
+test('TICKET-051: a shop without listed models has the Instagram link field alone (S-29b.15/16)', () => {
+  const noModels = { ...DOC, models: [] };
+  const e = (patch) => O.validate({ ...base(), kind: 'insta', chosen: null, ...patch }, noModels);
+  assert.equal(O.modelKind({ kind: 'pick' }, noModels), 'insta', 'nothing to choose between: always the link');
+  assert.equal(O.modelKind({ kind: null }, noModels), 'insta');
+  assert.equal(O.modelKind({ kind: 'photos' }, DOC), null);
+  assert.equal(O.modelKind({ kind: 'pick' }, DOC), 'pick');
+  const empty = e({ insta: '  ' });
+  assert.deepEqual(Object.keys(empty), ['insta'], 'the error under the field, no choice error');
+  assert.equal(empty.insta.id, 'err.instagramRequired');
+  assert.equal(e({ kind: 'pick', insta: '' }).insta.id, 'err.instagramRequired', 'a stale pick still means the link field');
+  assert.equal(e({ insta: 'https://www.tiktok.com/@x/video/1' }).insta.id, 'err.instagramInvalid', 'S-29b.4 rule kept');
+  assert.deepEqual(e({ insta: 'https://www.instagram.com/reel/C9xyz/' }), {});
+  const p = O.buildPayload({ ...base(), kind: 'pick', chosen: 'm1', insta: 'https://www.instagram.com/reel/C9xyz/' }, noModels);
+  assert.equal(p.instagram_url, 'https://www.instagram.com/reel/C9xyz/');
+  assert.equal('model_code' in p, false);
+  assert.equal('photos' in p, false);
+  // The built page: no radio is shown by default for the link field's row ids the script hides.
+  const page = read('o/index.html');
+  assert.match(page, /<label class="o-rc" id="f-kind-pick-row">/);
+  assert.match(page, /<label class="o-rc" id="f-kind-insta-row">/);
+  assert.match(page, /id="f-insta-help" data-s="form.instagramHelp"/);
+  assert.match(page, /aria-describedby="f-insta-help f-insta-err"/);
+  const src = read('assets/js/order.js');
+  assert.match(src, /\$\('f-kind-pick-row'\)\.hidden = !has;\s+\$\('f-kind-insta-row'\)\.hidden = !has;/, 'both radio rows hidden without models');
+  assert.match(src, /kind: d\.models\.length > 0 \? 'pick' : 'insta'/, 'a new form without models starts on the link');
+});
+
+test('TICKET-051: no customer photos anywhere on the page', () => {
+  const page = read('o/index.html');
+  const src = read('assets/js/order.js');
+  assert.doesNotMatch(page, /type="file"/, 'no file input');
+  assert.doesNotMatch(page, /f-photo|f-tiles|o-tile|value="photos"|ic-close/);
+  assert.doesNotMatch(src, /'photos'|\.photos\b|data_base64|createImageBitmap|toBlob|FileReader|createObjectURL/);
+  assert.doesNotMatch(read('assets/css/order.css'), /o-tile/);
+  assert.doesNotMatch(page, /img-src[^;]*blob:/, 'no blob: images in the CSP (only the photo previews used them)');
+  for (const id of REMOVED_IDS) {
+    assert.equal(id in STRINGS.ar || id in STRINGS.en, false, `strings: ${id} removed`);
+    assert.equal(src.includes(`'${id}'`) || page.includes(`"${id}"`), false, `page: ${id} unused`);
+  }
+  // No text asks for her photos (model.photoAlt is the alt of the shop's own model photos; «الصورة» in
+  // meas.enterHelp is the abaya picture).
+  const photoWords = { ar: /صوري|صورك|صور العباية|إضافة صورة/, en: /photo/i };
+  for (const lang of ['ar', 'en']) {
+    for (const [id, v] of Object.entries(STRINGS[lang])) {
+      if (id !== 'model.photoAlt') assert.doesNotMatch(v, photoWords[lang], `${lang} ${id} mentions photos`);
+    }
+  }
+});
+
+test('TICKET-051: strings equal the web copy deck (ids, Arabic, English)', { skip: NO_DECK }, () => {
+  const rows = {};
+  for (const line of DECK.split('\n')) {
+    const m = /^\| `([a-zA-Z]+\.[A-Za-z0-9.]+)` \| (.*?) \| (.*?) \| .*\|$/.exec(line);
+    if (m) rows[m[1]] = { ar: m[2], en: m[3] };
+  }
+  assert.deepEqual(Object.keys(rows).sort(), Object.keys(STRINGS.ar).sort(), 'the same ids as the deck');
+  assert.deepEqual(Object.keys(STRINGS.en).sort(), Object.keys(STRINGS.ar).sort());
+  for (const [id, r] of Object.entries(rows)) {
+    assert.equal(STRINGS.ar[id], r.ar, `ar ${id}`);
+    assert.equal(STRINGS.en[id], r.en, `en ${id}`);
+  }
+  for (const id of ['model.price', 'form.instagramHelp', 'err.instagramRequired', 'shop.modelsIntro', 'shop.noModels',
+    'model.unavailable', 'form.modelInstagram', 'err.modelRequired']) {
+    assert.ok(rows[id], `deck has ${id}`);
+  }
+  for (const id of REMOVED_IDS) assert.equal(id in rows, false, `deck no longer has ${id}`);
 });
 
 test('placeholders become isolated parts; names stay plain text', () => {
@@ -604,9 +678,24 @@ test('WhatsApp messages equal the copy file examples', () => {
   assert.equal(O.whatsappLink('+97317001100', t4),
     'https://wa.me/97317001100?text=Hello%2C%20I%20sent%20a%20request%20from%20your%20Darjina%20page%20for%20this%20post%3A%20https%3A%2F%2Fwww.instagram.com%2Fp%2FC7def%2F%20Name%3A%20Dana.');
   assert.equal(encodeURIComponent(O.whatsappText(STRINGS, 'en', { kind: 'model', code: 'm1', name: 'عباية كريب مطرزة', customerName: 'Reem' })).length, 201);
-  assert.equal(encodeURIComponent(O.whatsappText(STRINGS, 'ar', { kind: 'photos', customerName: 'Salwa' })).length, 421);
+  // Example 3 (ADR-0037): an Instagram link in Arabic, no photos message any more.
+  const t3 = O.whatsappText(STRINGS, 'ar', { kind: 'insta', url: 'https://www.instagram.com/reel/C9xyz/', customerName: 'Salwa' });
+  assert.equal(t3, 'مرحباً، أرسلت طلباً من صفحتكم على دارجينا لهذا المنشور: https://www.instagram.com/reel/C9xyz/ الاسم: Salwa.');
+  assert.equal(encodeURIComponent(t3).length, 400, 'copy example 3: encoded text 400 characters');
   assert.equal(O.whatsappLink(null, 'x'), null);
   assert.equal(O.whatsappLink('+97317001100', null), 'https://wa.me/97317001100');
+});
+
+test('TICKET-051: the four WhatsApp links equal the copy deck examples', { skip: NO_DECK }, () => {
+  const links = [...DECK.matchAll(/^(https:\/\/wa\.me\/\S+)$/gm)].map((m) => m[1]);
+  assert.equal(links.length, 4);
+  const made = [
+    O.whatsappText(STRINGS, 'ar', { kind: 'model', code: 'm1', name: 'عباية كريب مطرزة', customerName: 'Reem' }),
+    O.whatsappText(STRINGS, 'en', { kind: 'model', code: 'm1', name: 'عباية كريب مطرزة', customerName: 'Reem' }),
+    O.whatsappText(STRINGS, 'ar', { kind: 'insta', url: 'https://www.instagram.com/reel/C9xyz/', customerName: 'Salwa' }),
+    O.whatsappText(STRINGS, 'en', { kind: 'insta', url: 'https://www.instagram.com/p/C7def/', customerName: 'Dana' }),
+  ].map((m) => O.whatsappLink('+97317001100', m));
+  assert.deepEqual(made, links);
 });
 
 test('every text id the page uses exists in Arabic and English', () => {
@@ -653,6 +742,7 @@ test('built page: noindex, generic preview, CSP, no shop data; robots and sitema
   assert.match(page, /<meta property="og:image" content="https:\/\/darjina.com\/assets\/img\/og-image.jpg">/);
   assert.match(page, /Content-Security-Policy" content="default-src 'self'; script-src 'self' https:\/\/challenges.cloudflare.com;/);
   assert.match(page, /connect-src 'self' https:\/\/xfdrusgoqxohdxjzmucf.supabase.co/);
+  assert.match(page, /img-src 'self' data: https:\/\/xfdrusgoqxohdxjzmucf.supabase.co;/);
   assert.match(page, /<html lang="ar" dir="rtl">/);
   assert.doesNotMatch(page, /<script>/, 'no inline script (CSP)');
   const scripts = [...page.matchAll(/<script src="([^"]+)"/g)].map((m) => m[1]);

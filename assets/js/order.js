@@ -1,5 +1,8 @@
 /* Darjina public order page /o/ (TICKET-047; ADR-0036 sections 2, 4, 5, 9 and both amendments of
    2026-11-09; BR-91, BR-106, BR-108, BR-109; design S-29a-d, docs/design/copy-online-order-page.md).
+   TICKET-051 (ADR-0037 sections 1, 2, 5; BR-114 to BR-116): no customer photos (a catalogue model or an
+   Instagram post link; a shop without listed models shows the link field alone) and the model's exact
+   price ("Price: 25.000 BHD", never "From").
 
    One static page for every shop: reads ?h=<handle>&m=<code> (404.html forwards the path links
    /o/<handle>[/<code>] here), restores the clean path, loads the shop's public document from the Edge
@@ -40,17 +43,11 @@
     'sleeve_width', 'armhole', 'bust_width', 'waist_width', 'hip_circumference'];
   /** Country codes offered before the phone (copy form.countryCode); the shop's own is added when missing. */
   const COUNTRY_CODES = ['+973', '+966', '+971', '+974', '+965', '+968', '+962', '+20'];
-  const MAX_PHOTOS = 3;
-  /** Bucket `online-requests` file limit; the function refuses more (ADR-0036 section 5). */
-  const MAX_PHOTO_BYTES = 1572864;
-  const MAX_PHOTO_SIDE = 1600;
-  const JPEG_QUALITIES = [0.85, 0.75, 0.65, 0.55, 0.45, 0.35];
-  /** Bytes read before decoding: the magic bytes and the stored size (a JPEG's EXIF block comes first). */
-  const HEAD_BYTES = 262144;
   const GET_TIMEOUT_MS = 20000;
   const POST_TIMEOUT_MS = 60000;
   const TOKEN_TIMEOUT_MS = 30000;
-  /** Signed photo links expire after an hour: a failing image re-reads the document at most this often. */
+  /** Signed links of the shop logo and model photos expire after an hour: a failing image re-reads the
+   * document at most this often. */
   const IMAGE_REFRESH_MS = 60000;
   const TURNSTILE_SRC = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
   /** Shared with assets/js/site.js (the marketing pages remember the same choice). */
@@ -187,79 +184,17 @@
     return code ? text + NBSP + code : text;
   }
 
+  /** A model's exact price (ADR-0037 section 2): `from_price` (the name stays, its meaning is the price)
+   * in `from_price_currency` with its `minor_units`, e.g. `25.000 BHD`; null for a model without a price
+   * (missing or not above 0, possible only before batch 11), which shows no price line. */
+  function modelPrice(m) {
+    return m && Number(m.from_price) > 0 ? formatAmount(m.from_price, m.minor_units, m.from_price_currency) : null;
+  }
+
   /** `YYYY-MM-DD` -> `dd/MM/yyyy` (no Date object, so no time zone); '' for anything else. */
   function formatDate(iso) {
     const m = DATE.exec(String(iso || ''));
     return m ? m[3] + '/' + m[2] + '/' + m[1] : '';
-  }
-
-  /** {width, height} at most [max] on the longer side, never enlarged. */
-  function shrinkSize(width, height, max) {
-    const scale = Math.min(1, max / Math.max(width, height));
-    return { width: Math.max(1, Math.round(width * scale)), height: Math.max(1, Math.round(height * scale)) };
-  }
-
-  /** Kind from the first bytes, as the function checks: JPEG FF D8 FF, PNG 89 50 4E 47. */
-  function sniffImage(bytes) {
-    if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return 'jpg';
-    if (bytes.length >= 4 && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47) return 'png';
-    return null;
-  }
-
-  /** The stored {width, height} of a JPEG (first SOF marker) or PNG (IHDR) from its first bytes; null
-   * when it is not found there. EXIF orientation is not applied. */
-  function imageSize(bytes) {
-    const be16 = function (i) { return (bytes[i] << 8) | bytes[i + 1]; };
-    const kind = sniffImage(bytes);
-    if (kind === 'png') {
-      if (bytes.length < 24) return null;
-      const be32 = function (i) { return ((bytes[i] << 24) >>> 0) + (bytes[i + 1] << 16) + (bytes[i + 2] << 8) + bytes[i + 3]; };
-      const width = be32(16);
-      const height = be32(20);
-      return width > 0 && height > 0 ? { width: width, height: height } : null;
-    }
-    if (kind !== 'jpg') return null;
-    let i = 2;
-    while (i + 3 < bytes.length) {
-      if (bytes[i] !== 0xff) return null;
-      const marker = bytes[i + 1];
-      if (marker === 0xff) { i += 1; continue; } // fill byte
-      if (marker === 0x01 || (marker >= 0xd0 && marker <= 0xd9)) { i += 2; continue; } // no length
-      // SOF0..SOF15 except DHT (C4), JPG (C8) and DAC (CC)
-      if (marker >= 0xc0 && marker <= 0xcf && marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc) {
-        if (i + 8 >= bytes.length) return null;
-        const height = be16(i + 5);
-        const width = be16(i + 7);
-        return width > 0 && height > 0 ? { width: width, height: height } : null;
-      }
-      i += 2 + be16(i + 2);
-    }
-    return null;
-  }
-
-  /** createImageBitmap resize options (W5): only the longer stored side is given, so the browser keeps
-   * the aspect ratio whatever the EXIF orientation does (the canvas step shrinks the rest); null when
-   * no shrinking is needed or the size is unknown. */
-  function bitmapResize(size, max) {
-    if (!size || !(size.width > 0) || !(size.height > 0) || Math.max(size.width, size.height) <= max) return null;
-    return size.width >= size.height ? { resizeWidth: max, resizeQuality: 'high' } : { resizeHeight: max, resizeQuality: 'high' };
-  }
-
-  /** The photo error for a failed preparation: the type error only when the file is not a JPEG or PNG
-   * the browser can decode; anything else (no memory for the canvas, an empty toBlob, still too large)
-   * is the size error, the closest text the copy has. */
-  function photoErrorId(error) {
-    return error && error.message === 'type' ? 'err.photoType' : 'err.photoLarge';
-  }
-
-  /** A runner that starts each task only after the previous one settled (W5: one photo at a time). */
-  function createQueue() {
-    let tail = Promise.resolve();
-    return function (task) {
-      const run = tail.then(function () { return task(); });
-      tail = run.then(null, function () { /* the next task runs anyway */ });
-      return run;
-    };
   }
 
   /** True at most once per [ms] (the first call always). */
@@ -428,10 +363,10 @@
     return fillParts(template, vars).map(function (p) { return p.text; }).join('');
   }
 
-  /** The WhatsApp message (copy wa.*) in [lang]: kind `model` {code, name}, `photos`, `insta` {url}
-   * or `openLimit`; always with the customer's own name (she sends it herself). */
+  /** The WhatsApp message (copy wa.*) in [lang]: kind `model` {code, name}, `insta` {url} or
+   * `openLimit`; always with the customer's own name (she sends it herself). */
   function whatsappText(strings, lang, info) {
-    const id = { model: 'wa.model', photos: 'wa.photos', insta: 'wa.instagram', openLimit: 'wa.openLimit' }[info.kind];
+    const id = { model: 'wa.model', insta: 'wa.instagram', openLimit: 'wa.openLimit' }[info.kind];
     return fillText(text(strings, lang, id), {
       code: info.code, name: info.name, url: info.url, customerName: info.customerName,
     });
@@ -501,10 +436,18 @@
     };
   }
 
+  /** How the form names the model (ADR-0037 section 1): 'pick' (a catalogue model), 'insta' (an
+   * Instagram post link) or null (nothing chosen yet). A shop without listed models has only the link
+   * field (S-29b.15), so it is always 'insta' there. */
+  function modelKind(v, doc) {
+    if (!(doc.models || []).length) return 'insta';
+    return v.kind === 'pick' || v.kind === 'insta' ? v.kind : null;
+  }
+
   /**
    * The page's checks (BR-108), same rules as the server. [v]: {name, cc, phone, kind
-   * ('pick'|'photos'|'insta'|null), chosen, photos:[{key, b64}], insta, branchId, measMode,
-   * meas:{key: typed}, pieces, notes, date}. Answers {field: {id, vars?}} in screen order.
+   * ('pick'|'insta'|null), chosen, insta, branchId, measMode, meas:{key: typed}, pieces, notes, date}.
+   * Answers {field: {id, vars?}} in screen order.
    */
   function validate(v, doc) {
     const e = {};
@@ -514,14 +457,15 @@
     if (trimText(v.phone) === '') e.phone = { id: 'err.phoneRequired' };
     else if (normalizePhone(v.phone, v.cc) === null) e.phone = { id: 'err.phoneInvalid' };
     const models = doc.models || [];
-    if (v.kind === 'pick') {
+    const kind = modelKind(v, doc);
+    if (kind === 'pick') {
       if (!models.some(function (m) { return m.code === v.chosen; })) e.model = { id: 'err.modelRequired' };
-    } else if (v.kind === 'photos') {
-      if (!v.photos || v.photos.length === 0) e.model = { id: 'err.modelRequired' };
-    } else if (v.kind === 'insta') {
+    } else if (kind === 'insta') {
       const url = instagramUrl(v.insta);
-      if (url === '') e.model = { id: 'err.modelRequired' };
-      else if (url === null) e.insta = { id: 'err.instagramInvalid' };
+      if (url === null) e.insta = { id: 'err.instagramInvalid' };
+      else if (url === '' && models.length) e.model = { id: 'err.modelRequired' };
+      // Without listed models the link field stands alone: its own error under it (S-29b.16).
+      else if (url === '') e.insta = { id: 'err.instagramRequired' };
     } else {
       e.model = { id: 'err.modelRequired' };
     }
@@ -547,13 +491,13 @@
   }
 
   /** What of the form stays with a new document (W8): the chosen model and the branch only while still
-   * offered; with no model left, no way of naming the model stays chosen. [form]: {kind, chosen,
-   * branchId}. lostModel: the chosen model is gone (the page shows the unavailable note). */
+   * offered; with no model left, only the Instagram link field remains (ADR-0037). [form]: {kind,
+   * chosen, branchId}. lostModel: the chosen model is gone (the page shows the unavailable note). */
   function afterRefresh(form, doc) {
     const models = doc.models || [];
     const kept = !!form.chosen && models.some(function (m) { return m.code === form.chosen; });
     return {
-      kind: form.kind === 'pick' && models.length === 0 ? null : form.kind,
+      kind: models.length === 0 ? 'insta' : form.kind,
       chosen: kept ? form.chosen : null,
       branchId: form.branchId && (doc.branches || []).some(function (b) { return b.id === form.branchId; }) ? form.branchId : null,
       lostModel: !!form.chosen && !kept,
@@ -573,18 +517,16 @@
   }
 
   /** The POST body without `client_request_id` and `turnstile_token` (ADR-0036 section 5); only the
-   * chosen way of naming the model is sent; [v] passed [validate]. */
+   * chosen way of naming the model is sent, never photos (ADR-0037); [v] passed [validate]. */
   function buildPayload(v, doc) {
     const p = {
       handle: doc.handle,
       customer_name: trimText(v.name),
       phone: normalizePhone(v.phone, v.cc),
     };
-    if (v.kind === 'pick') p.model_code = v.chosen;
-    if (v.kind === 'photos') {
-      p.photos = v.photos.map(function (ph) { return { content_type: 'image/jpeg', data_base64: ph.b64 }; });
-    }
-    if (v.kind === 'insta') p.instagram_url = instagramUrl(v.insta);
+    const kind = modelKind(v, doc);
+    if (kind === 'pick') p.model_code = v.chosen;
+    if (kind === 'insta') p.instagram_url = instagramUrl(v.insta);
     if ((doc.branches || []).length > 1) p.branch_id = v.branchId;
     p.measurement_mode = v.measMode === 'LAST' || v.measMode === 'ENTERED' ? v.measMode : 'SHOP';
     if (p.measurement_mode === 'ENTERED') {
@@ -604,12 +546,11 @@
     return p;
   }
 
-  /** What identifies the form content: the payload with each photo by its key (a photo, once added,
-   * never changes; a removed and added again photo gets a new key). The page language is sent but is
-   * not content (W4): switching it before a resend keeps the id. */
-  function fingerprint(payload, photoKeys) {
-    return JSON.stringify([payload, photoKeys || []], function (k, val) {
-      return k === 'data_base64' || (k === 'language' && this === payload) ? undefined : val;
+  /** What identifies the form content: the payload. The page language is sent but is not content
+   * (W4): switching it before a resend keeps the id. */
+  function fingerprint(payload) {
+    return JSON.stringify(payload, function (k, val) {
+      return k === 'language' && this === payload ? undefined : val;
     });
   }
 
@@ -625,7 +566,7 @@
     const branch = branches.find(function (b) { return b.id === payload.branch_id; })
       || (branches.length === 1 ? branches[0] : null);
     return {
-      kind: v.kind, code: code, name: m ? m.name : null, url: payload.instagram_url || null,
+      kind: modelKind(v, doc || {}), code: code, name: m ? m.name : null, url: payload.instagram_url || null,
       branchName: branch ? branch.name : null, customerName: payload.customer_name, lang: payload.language,
       shopPhone: doc && doc.shop ? doc.shop.phone : null,
     };
@@ -671,7 +612,8 @@
         default: break;
       }
     }
-    // 413, 5xx, 503 not_configured, photo_invalid the page did not catch, an unreadable answer.
+    // 413, 5xx, 503 not_configured, an unreadable answer (the function ignores `photos` since ADR-0037,
+    // so photo_invalid no longer comes; an old function's answer would land here too).
     return { kind: 'alert', alert: 'send.server', retry: true };
   }
 
@@ -694,7 +636,7 @@
 
     const st = {
       lang: 'ar', h: '', m: '', doc: null, view: 'loading',
-      kind: null, chosen: null, note: false, photos: [], photoError: null, seq: 0,
+      kind: null, chosen: null, note: false,
       branchId: null, measOpen: false, measMode: 'SHOP', activePoint: null,
       errors: {}, summary: null, alert: null, sending: false, sends: 0, last: null, confirm: null, sheet: null,
     };
@@ -843,12 +785,11 @@
     // ---- form state ----
     function resetForm(fromLink) {
       const d = st.doc;
-      st.photos.forEach(function (p) { if (p.url) URL.revokeObjectURL(p.url); });
       Object.assign(st, {
-        kind: d.models.length > 0 ? 'pick' : null,
+        kind: d.models.length > 0 ? 'pick' : 'insta',
         chosen: fromLink ? d.model : null,
         note: fromLink && d.model_unavailable,
-        photos: [], photoError: null, branchId: null, measOpen: false, measMode: 'SHOP', activePoint: null,
+        branchId: null, measOpen: false, measMode: 'SHOP', activePoint: null,
         errors: {}, summary: null, alert: null, sending: false, last: null, confirm: null,
       });
       $('o-form').reset();
@@ -870,7 +811,6 @@
       return {
         name: $('f-name').value, cc: $('f-cc').value, phone: $('f-phone').value,
         kind: st.kind, chosen: st.chosen,
-        photos: st.photos.filter(function (p) { return p.b64; }).map(function (p) { return { key: p.key, b64: p.b64 }; }),
         insta: $('f-insta').value, branchId: st.branchId, measMode: st.measMode, meas: meas,
         pieces: $('f-pieces').value, notes: $('f-notes').value, date: $('f-date').value,
         contact: checked ? checked.value : 'WHATSAPP', lang: st.lang,
@@ -889,7 +829,6 @@
       renderModels();
       renderKind();
       renderPick();
-      renderPhotos();
       renderBranchField();
       renderPieces();
       renderCounter();
@@ -935,9 +874,10 @@
       }));
     }
 
+    /** "Price: 25.000 BHD" (model.price), the amount and its code in one LTR isolate; none without a price. */
     function priceLine(m) {
-      const amount = formatAmount(m.from_price, m.minor_units, m.from_price_currency);
-      return amount ? el('span', { class: 'o-pr' }, [frag('model.from', { amount: ltr(amount) })]) : null;
+      const amount = modelPrice(m);
+      return amount ? el('span', { class: 'o-pr' }, [frag('model.price', { amount: ltr(amount) })]) : null;
     }
     /** mode: 'button' (opens the details sheet), 'plain' (gallery) or 'thumb' (chosen-model row, no counter). */
     function photoNode(m, index, mode) {
@@ -977,14 +917,17 @@
       $('o-no-models').hidden = has;
       $('o-models-intro').hidden = !has;
       setChildren($('o-model-grid'), st.doc.models.map(modelCard));
+      // S-29b.15: without listed models there is nothing to choose between; the link field stands alone.
       $('f-kind-pick-row').hidden = !has;
+      $('f-kind-insta-row').hidden = !has;
+      $('f-insta-panel').classList.toggle('o-sub--alone', !has);
     }
 
     function renderKind() {
-      doc.querySelectorAll('input[name="mkind"]').forEach(function (r) { r.checked = r.value === st.kind; });
-      $('f-pick-panel').hidden = st.kind !== 'pick';
-      $('f-photos-panel').hidden = st.kind !== 'photos';
-      $('f-insta-panel').hidden = st.kind !== 'insta';
+      const kind = modelKind(st, st.doc);
+      doc.querySelectorAll('input[name="mkind"]').forEach(function (r) { r.checked = r.value === kind; });
+      $('f-pick-panel').hidden = kind !== 'pick';
+      $('f-insta-panel').hidden = kind !== 'insta';
     }
 
     function renderPick() {
@@ -1000,23 +943,6 @@
         open.addEventListener('click', function () { openSheet({ type: 'picker' }, open); });
         setChildren($('f-pick-panel'), [el('p', { class: 'o-hl', text: t('form.modelPickNone') }), open]);
       }
-    }
-
-    function renderPhotos() {
-      const tiles = st.photos.map(function (p, i) {
-        const x = el('button', { type: 'button', class: 'o-tile-x', 'aria-label': fillText(t('form.photoRemove'), { index: String(i + 1) }) }, [icon('close')]);
-        x.addEventListener('click', function () { removePhoto(p.key); });
-        if (p.status === 'busy') {
-          return el('div', { class: 'o-tile is-busy', role: 'status', 'aria-label': t('form.photoPreparing') }, [el('span', { class: 'o-spin' }), x]);
-        }
-        return el('div', { class: 'o-tile' }, [el('img', { src: p.url, alt: '' }), x]);
-      });
-      const add = $('f-photo-add');
-      add.hidden = st.photos.length >= MAX_PHOTOS;
-      setChildren($('f-tiles'), tiles.concat([add]));
-      const err = st.photoError;
-      $('f-photos-help').hidden = !!err;
-      showError('f-photos-err', null, err ? { id: err } : null);
     }
 
     function renderBranchField() {
@@ -1100,6 +1026,7 @@
       showError('f-notes-err', 'f-notes', e.notes);
       showError('f-date-err', 'f-date', e.date);
       $('f-phone-help').hidden = !!e.phone;
+      $('f-insta-help').hidden = !!e.insta;
       renderDateHelp();
       const summary = $('o-summary');
       summary.hidden = !st.summary;
@@ -1142,14 +1069,12 @@
     function renderConfirm() {
       const c = st.confirm;
       if (!c) return;
-      let model;
-      if (c.kind === 'pick') model = [ltr(c.code), c.name];
-      else model = t(c.kind === 'photos' ? 'form.modelPhotos' : 'form.modelInstagram');
+      const model = c.kind === 'pick' ? [ltr(c.code), c.name] : t('form.modelInstagram');
       setChildren($('o-sum-model'), [frag('confirm.summaryModel', { model: model })]);
       $('o-sum-branch').hidden = !c.branchName;
       setChildren($('o-sum-branch'), c.branchName ? [frag('confirm.summaryBranch', { branch: c.branchName })] : []);
       const link = whatsappLink(c.shopPhone, whatsappText(S, c.lang, {
-        kind: c.kind === 'pick' ? 'model' : c.kind, code: c.code, name: c.name, url: c.url, customerName: c.customerName,
+        kind: c.kind === 'pick' ? 'model' : 'insta', code: c.code, name: c.name, url: c.url, customerName: c.customerName,
       }));
       $('o-confirm-wa').hidden = !link;
       if (link) $('o-confirm-wa-link').setAttribute('href', link);
@@ -1183,118 +1108,6 @@
       renderModelChoice();
       renderErrors();
       scrollToNode($('f-model'));
-    }
-
-    // ---- photos ----
-    function readBytes(blob) {
-      return new Promise(function (resolve, reject) {
-        const r = new FileReader();
-        r.onload = function () { resolve(new Uint8Array(r.result)); };
-        r.onerror = function () { reject(new Error('type')); };
-        r.readAsArrayBuffer(blob);
-      });
-    }
-    function decodeImage(file) {
-      return new Promise(function (resolve, reject) {
-        const url = URL.createObjectURL(file);
-        const img = new Image();
-        img.onload = function () { URL.revokeObjectURL(url); resolve(img); };
-        img.onerror = function () { URL.revokeObjectURL(url); reject(new Error('type')); };
-        img.src = url;
-      });
-    }
-    function canvasBlob(canvas, quality) {
-      return new Promise(function (resolve) { canvas.toBlob(resolve, 'image/jpeg', quality); });
-    }
-    function blobBase64(blob) {
-      return new Promise(function (resolve, reject) {
-        const r = new FileReader();
-        r.onload = function () { resolve(String(r.result).replace(/^data:[^,]*,/, '')); };
-        r.onerror = function () { reject(new Error('memory')); };
-        r.readAsDataURL(blob);
-      });
-    }
-    /** The decoded photo {source, width, height, release}: createImageBitmap already shrunk where the
-     * browser has it (W5), else an <img>. */
-    async function decodePhoto(file, head) {
-      if (typeof win.createImageBitmap === 'function') {
-        try {
-          const bmp = await win.createImageBitmap(file, Object.assign({ imageOrientation: 'from-image' },
-            bitmapResize(imageSize(head), MAX_PHOTO_SIDE)));
-          return { source: bmp, width: bmp.width, height: bmp.height, release: function () { if (bmp.close) bmp.close(); } };
-        } catch (e) {
-          // an older browser (option values) or a file it decodes only as an <img>
-        }
-      }
-      const img = await decodeImage(file);
-      return { source: img, width: img.naturalWidth, height: img.naturalHeight, release: function () { img.removeAttribute('src'); } };
-    }
-    /** BR-109: JPEG or PNG only (by content), shrunk to <= 1600 px, JPEG quality stepped down until
-     * <= 1.5 MiB. Throws Error('type'), Error('large') or Error('memory') (no canvas, empty toBlob). The
-     * decoded image and the canvas are released before it returns. */
-    async function preparePhoto(file) {
-      const head = await readBytes(file.slice(0, HEAD_BYTES));
-      if (!sniffImage(head)) throw new Error('type');
-      const pic = await decodePhoto(file, head);
-      const canvas = doc.createElement('canvas');
-      try {
-        const size = shrinkSize(pic.width, pic.height, MAX_PHOTO_SIDE);
-        canvas.width = size.width;
-        canvas.height = size.height;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) throw new Error('memory');
-        ctx.fillStyle = '#ffffff'; // a transparent PNG becomes a JPEG on white
-        ctx.fillRect(0, 0, size.width, size.height);
-        ctx.drawImage(pic.source, 0, 0, size.width, size.height);
-        pic.release();
-        let blob = null;
-        for (const q of JPEG_QUALITIES) {
-          blob = await canvasBlob(canvas, q);
-          if (!blob) throw new Error('memory'); // the browser could not encode it (out of memory)
-          if (blob.size <= MAX_PHOTO_BYTES) break;
-        }
-        if (blob.size > MAX_PHOTO_BYTES) throw new Error('large');
-        return { blob: blob, b64: await blobBase64(blob) };
-      } finally {
-        pic.release();
-        canvas.width = 0;
-        canvas.height = 0;
-      }
-    }
-    const photoQueue = createQueue();
-    function addFiles(files) {
-      st.photoError = null;
-      Array.from(files).forEach(function (file) {
-        if (st.photos.length >= MAX_PHOTOS) { st.photoError = 'err.photoMax'; return; }
-        const entry = { key: ++st.seq, status: 'busy', b64: null, url: null };
-        const kept = function () { return st.photos.indexOf(entry) >= 0; };
-        // W5: one photo at a time; a photo removed while it waits is not prepared.
-        entry.promise = photoQueue(function () { return kept() ? preparePhoto(file) : null; }).then(function (r) {
-          if (!r || !kept()) return;
-          entry.b64 = r.b64;
-          entry.url = URL.createObjectURL(r.blob);
-          entry.status = 'ready';
-        }, function (e) {
-          if (!kept()) return;
-          st.photos = st.photos.filter(function (p) { return p !== entry; });
-          st.photoError = photoErrorId(e);
-        }).then(function () {
-          if (st.photos.some(function (p) { return p.status === 'ready'; })) delete st.errors.model;
-          renderPhotos();
-          renderErrors();
-        });
-        st.photos.push(entry);
-      });
-      renderPhotos();
-    }
-    function removePhoto(key) {
-      const p = st.photos.find(function (x) { return x.key === key; });
-      if (p && p.url) URL.revokeObjectURL(p.url);
-      st.photos = st.photos.filter(function (x) { return x.key !== key; });
-      st.photoError = null;
-      renderPhotos();
-      const add = $('f-photo-input');
-      if (add) add.focus();
     }
 
     // ---- bot check (Cloudflare Turnstile, explicit render; ADR-0036 section 5 step 2) ----
@@ -1381,8 +1194,8 @@
     }
 
     /**
-     * W2: busy from the first tap, before any wait (photos still being prepared, the bot check, the
-     * answer), and idle again on every way out; the button stays disabled meanwhile. The steps answer
+     * W2: busy from the first tap, before any wait (the bot check, the answer), and idle again on
+     * every way out; the button stays disabled meanwhile. The steps answer
      * what to show, which runs once the form is enabled again (focus cannot go into a disabled form).
      */
     async function submit() {
@@ -1411,7 +1224,6 @@
     }
 
     async function attempt() {
-      await Promise.all(st.photos.map(function (p) { return p.promise; }));
       const v = values();
       st.alert = null;
       st.errors = validate(v, st.doc);
@@ -1425,7 +1237,7 @@
     async function send(v) {
       const payload = buildPayload(v, st.doc);
       const sent = confirmSnapshot(v, payload, st.doc);
-      const fp = fingerprint(payload, v.photos.map(function (p) { return p.key; }));
+      const fp = fingerprint(payload);
       const id = requestIdFor(st.last, fp, function () { return uuidv4(win.crypto); });
       st.last = { fp: fp, id: id };
       const got = await bot.get();
@@ -1612,10 +1424,6 @@
           if (st.errors.insta && st.kind !== 'insta') { delete st.errors.insta; renderErrors(); }
         });
       });
-      $('f-photo-input').addEventListener('change', function (e) {
-        addFiles(e.target.files || []);
-        e.target.value = '';
-      });
       $('f-meas-toggle').addEventListener('click', function () {
         st.measOpen = !st.measOpen;
         renderMeas();
@@ -1699,12 +1507,11 @@
   }
 
   return {
-    MEAS_KEYS: MEAS_KEYS, COUNTRY_CODES: COUNTRY_CODES, MAX_PHOTO_BYTES: MAX_PHOTO_BYTES, FIELD_ORDER: FIELD_ORDER,
+    MEAS_KEYS: MEAS_KEYS, COUNTRY_CODES: COUNTRY_CODES, FIELD_ORDER: FIELD_ORDER,
     westernDigits: westernDigits, trimText: trimText, charLength: charLength, normHandle: normHandle, normCode: normCode,
     parseParams: parseParams, cleanPath: cleanPath, normalizePhone: normalizePhone, instagramUrl: instagramUrl,
-    parseMeasure: parseMeasure, formatAmount: formatAmount, formatDate: formatDate, shrinkSize: shrinkSize,
-    sniffImage: sniffImage, imageSize: imageSize, bitmapResize: bitmapResize, photoErrorId: photoErrorId,
-    createQueue: createQueue, createThrottle: createThrottle, createTokenBox: createTokenBox, fetchJson: fetchJson,
+    parseMeasure: parseMeasure, formatAmount: formatAmount, modelPrice: modelPrice, formatDate: formatDate,
+    modelKind: modelKind, createThrottle: createThrottle, createTokenBox: createTokenBox, fetchJson: fetchJson,
     docResult: docResult, loadView: loadView, isFramed: isFramed, uuidv4: uuidv4, text: text, fillParts: fillParts,
     fillText: fillText, whatsappText: whatsappText, whatsappLink: whatsappLink, safeUrl: safeUrl, sanitizeDoc: sanitizeDoc,
     validate: validate, afterRefresh: afterRefresh, refusalErrors: refusalErrors, buildPayload: buildPayload,

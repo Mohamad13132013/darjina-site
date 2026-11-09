@@ -447,7 +447,7 @@ def order_head(strings):
     csp = ("default-src 'self'; script-src 'self' https://challenges.cloudflare.com; "
            "frame-src https://challenges.cloudflare.com; "
            f"connect-src 'self' {origin} https://challenges.cloudflare.com; "
-           f"img-src 'self' data: blob: {origin}; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+           f"img-src 'self' data: {origin}; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
            "font-src https://fonts.gstatic.com; object-src 'none'; base-uri 'none'; form-action 'none'")
     title = html.escape(strings["meta.title"], quote=True)
     desc = html.escape(strings["meta.description"], quote=True)
