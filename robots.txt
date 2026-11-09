@@ -2,5 +2,6 @@ User-agent: *
 Allow: /
 Disallow: /tools/
 Disallow: /content/
+Disallow: /o/
 
 Sitemap: https://darjina.com/sitemap.xml

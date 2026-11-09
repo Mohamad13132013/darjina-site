@@ -1,0 +1,206 @@
+<!-- Public order page /o/ (TICKET-047, S-29a-d; ADR-0036 sections 2, 4, 5, 9). One page for every shop and
+     model; built by tools/build.py into o/index.html. Texts: data-s="<id>" (element text) and
+     data-s-attr="attr=<id>;..." (attributes) from assets/js/order-strings.js; build.py writes the Arabic
+     text, assets/js/order.js switches it in place. Nothing of any shop is in this file. -->
+<a class="skip-link" href="#main" data-s="form.title"></a>
+<header class="o-top">
+  <a class="o-brand" href="/" data-href-ar="/" data-href-en="/en/"><img src="/assets/img/logo-horizontal.webp" width="131" height="44" alt="دارجينا Darjina"></a>
+  <button class="o-lang" type="button" id="o-lang" data-s-attr="aria-label=lang.switchLabel"><span data-s="lang.switch" lang="en"></span></button>
+</header>
+<main id="main" tabindex="-1">
+  <noscript><div class="o-sec"><p class="o-note o-note--sand" data-s="page.noscript"></p></div></noscript>
+
+  <div id="v-loading" class="o-view" role="status" aria-live="polite">
+    <div class="o-hero o-hero--skel" aria-hidden="true"><span class="o-logo o-skel-dark"></span><span class="o-skel-lines"><span class="o-skel o-skel-dark"></span><span class="o-skel o-skel-dark" style="width:60%"></span></span></div>
+    <div class="o-sec">
+      <p class="o-small" data-s="page.loading"></p>
+      <span class="o-skel" style="width:70%"></span><span class="o-skel" style="width:45%"></span><span class="o-skel" style="width:90%"></span>
+    </div>
+  </div>
+
+  <div id="v-error" class="o-view" hidden>
+    <div class="o-sec">
+      <div class="o-note o-note--err" role="alert">{{icon:alert}}<div class="o-note-body"><p data-s="page.loadError"></p><div class="o-note-acts"><button type="button" class="btn btn--ghost o-btn-s" id="o-load-retry" data-s="common.retry"></button></div></div></div>
+    </div>
+  </div>
+
+  <div id="v-na" class="o-view o-na" hidden>
+    <span class="o-ring">{{icon:store}}</span>
+    <h1 data-s="na.title" tabindex="-1" id="o-na-title"></h1>
+    <p data-s="na.body"></p>
+    <a class="btn btn--ghost" href="/" data-href-ar="/" data-href-en="/en/" data-s="na.home"></a>
+  </div>
+
+  <div id="v-shop" class="o-view" hidden>
+    <section class="o-hero" aria-labelledby="o-shop-name">
+      <div class="o-id">
+        <span class="o-logo" id="o-logo"></span>
+        <div class="o-id-text"><h1 id="o-shop-name" tabindex="-1"></h1><p class="o-phone" id="o-shop-phone" hidden></p></div>
+      </div>
+      <div class="o-acts" id="o-hero-acts">
+        <a class="btn btn--light o-shop-wa" id="o-shop-wa" target="_blank" rel="noopener noreferrer" hidden>{{icon:chat}}<span data-s="shop.whatsapp"></span></a>
+        <a class="btn btn--ghost-dark o-shop-call" id="o-shop-call" hidden>{{icon:phone}}<span data-s="shop.call"></span></a>
+        <a class="btn btn--sand" href="#order" id="o-shop-order" data-s="shop.order"></a>
+      </div>
+    </section>
+
+    <div class="o-sec o-sec--note" id="o-model-note" hidden>
+      <div class="o-note o-note--sand" role="status">{{icon:info}}<p data-s="model.unavailable"></p></div>
+    </div>
+
+    <section class="o-sec" id="o-branches" aria-labelledby="o-branches-title">
+      <h2 id="o-branches-title" data-s="shop.branchesTitle"></h2>
+      <ul class="o-branch-list" id="o-branch-list"></ul>
+    </section>
+
+    <section class="o-sec" id="o-models" aria-labelledby="o-models-title">
+      <h2 id="o-models-title" data-s="shop.modelsTitle"></h2>
+      <p class="o-small" id="o-models-intro" data-s="shop.modelsIntro"></p>
+      <div class="o-note o-note--info" id="o-no-models" hidden>{{icon:info}}<p data-s="shop.noModels"></p></div>
+      <div class="o-grid" id="o-model-grid"></div>
+    </section>
+
+    <section class="o-form" id="order" aria-labelledby="o-form-title" tabindex="-1">
+      <h2 id="o-form-title" data-s="form.title"></h2>
+      <p class="o-lead" data-s="form.intro"></p>
+      <div class="o-note o-note--err" id="o-summary" role="alert" tabindex="-1" hidden>{{icon:alert}}<p id="o-summary-text"></p></div>
+      <div id="o-alert" hidden></div>
+      <form id="o-form" novalidate>
+        <fieldset class="o-fields" id="o-fields">
+          <div class="o-f" data-field="name">
+            <label class="o-lab" for="f-name" data-s="form.name"></label>
+            <input class="o-in" id="f-name" name="name" type="text" autocomplete="name" maxlength="100" aria-describedby="f-name-err">
+            <p class="o-er" id="f-name-err" hidden></p>
+          </div>
+
+          <div class="o-f" data-field="phone">
+            <label class="o-lab" for="f-phone" data-s="form.phone"></label>
+            <div class="o-phone-row">
+              <select class="o-in o-cc" id="f-cc" data-s-attr="aria-label=form.countryCode"></select>
+              <input class="o-in" id="f-phone" name="phone" type="tel" inputmode="tel" autocomplete="tel-national" dir="ltr" maxlength="25" aria-describedby="f-phone-help f-phone-err">
+            </div>
+            <p class="o-hl" id="f-phone-help" data-s="form.phoneHelp"></p>
+            <p class="o-er" id="f-phone-err" hidden></p>
+          </div>
+
+          <fieldset class="o-f o-set" data-field="model" id="f-model" aria-describedby="f-model-err">
+            <legend class="o-lab" data-s="form.modelTitle"></legend>
+            <div class="o-choice">
+              <label class="o-rc" id="f-kind-pick-row"><input type="radio" name="mkind" value="pick" id="f-kind-pick"><span class="o-dot" aria-hidden="true"></span><span class="o-rc-tx" data-s="form.modelPick"></span></label>
+              <div class="o-sub" id="f-pick-panel" hidden></div>
+              <label class="o-rc"><input type="radio" name="mkind" value="photos" id="f-kind-photos"><span class="o-dot" aria-hidden="true"></span><span class="o-rc-tx" data-s="form.modelPhotos"></span></label>
+              <div class="o-sub" id="f-photos-panel" hidden>
+                <div class="o-tiles" id="f-tiles">
+                  <label class="o-tile o-tile--add" id="f-photo-add">{{icon:image}}<span data-s="form.photosAdd"></span><input type="file" id="f-photo-input" accept="image/jpeg,image/png" multiple class="visually-hidden" aria-describedby="f-photos-help f-photos-err"></label>
+                </div>
+                <p class="o-hl" id="f-photos-help" data-s="form.photosHelp"></p>
+                <p class="o-er" id="f-photos-err" hidden></p>
+              </div>
+              <label class="o-rc"><input type="radio" name="mkind" value="insta" id="f-kind-insta"><span class="o-dot" aria-hidden="true"></span><span class="o-rc-tx" data-s="form.modelInstagram"></span></label>
+              <div class="o-sub o-f" id="f-insta-panel" hidden>
+                <label class="o-lab" for="f-insta" data-s="form.instagramLabel"></label>
+                <input class="o-in" id="f-insta" type="url" inputmode="url" dir="ltr" autocomplete="off" maxlength="300" data-s-attr="placeholder=form.instagramHint" aria-describedby="f-insta-err">
+                <p class="o-er" id="f-insta-err" hidden></p>
+              </div>
+            </div>
+            <p class="o-er" id="f-model-err" hidden></p>
+          </fieldset>
+
+          <fieldset class="o-f o-set" data-field="branch" id="f-branch" aria-describedby="f-branch-err" hidden>
+            <legend class="o-lab" data-s="form.branch"></legend>
+            <div class="o-choice" id="f-branch-list"></div>
+            <p class="o-er" id="f-branch-err" hidden></p>
+          </fieldset>
+
+          <div class="o-disc" id="f-meas" data-field="meas">
+            <button type="button" class="o-disc-hd" id="f-meas-toggle" aria-expanded="false" aria-controls="f-meas-body">
+              <span class="o-disc-tx"><span class="o-disc-title" data-s="meas.title"></span><span id="f-meas-summary"></span></span>{{icon:chevron}}
+            </button>
+            <div class="o-disc-bd" id="f-meas-body" hidden>
+              <fieldset class="o-set o-choice">
+                <legend class="visually-hidden" data-s="meas.title"></legend>
+                <label class="o-rc"><input type="radio" name="mmode" value="SHOP" checked><span class="o-dot" aria-hidden="true"></span><span class="o-rc-tx" data-s="meas.optShop"></span></label>
+                <label class="o-rc"><input type="radio" name="mmode" value="LAST" aria-describedby="f-meas-last-help"><span class="o-dot" aria-hidden="true"></span><span class="o-rc-tx"><span data-s="meas.optLast"></span><small id="f-meas-last-help" data-s="meas.optLastHelp"></small></span></label>
+                <label class="o-rc"><input type="radio" name="mmode" value="ENTERED"><span class="o-dot" aria-hidden="true"></span><span class="o-rc-tx" data-s="meas.optEnter"></span></label>
+              </fieldset>
+              <div id="f-meas-enter" hidden>
+                <p class="o-hl" data-s="meas.enterHelp"></p>
+                {{measurements}}
+              </div>
+            </div>
+          </div>
+
+          <div class="o-f" data-field="pieces">
+            <label class="o-lab" for="f-pieces" data-s="form.pieces"></label>
+            <div class="o-step">
+              <button type="button" id="f-pieces-less" data-s-attr="aria-label=form.piecesLess">{{icon:minus}}</button>
+              <input id="f-pieces" type="text" inputmode="numeric" dir="ltr" maxlength="2" value="1" aria-describedby="f-pieces-err">
+              <button type="button" id="f-pieces-more" data-s-attr="aria-label=form.piecesMore">{{icon:plus}}</button>
+            </div>
+            <p class="o-er" id="f-pieces-err" hidden></p>
+          </div>
+
+          <div class="o-f" data-field="notes">
+            <label class="o-lab" for="f-notes"><span data-s="form.notes"></span> <span class="o-opt">(<span data-s="common.optional"></span>)</span></label>
+            <textarea class="o-in o-ta" id="f-notes" maxlength="500" rows="3" data-s-attr="placeholder=form.notesHint" aria-describedby="f-notes-count f-notes-err"></textarea>
+            <p class="o-hl o-count" id="f-notes-count"></p>
+            <p class="o-er" id="f-notes-err" hidden></p>
+          </div>
+
+          <div class="o-f" data-field="date">
+            <label class="o-lab" for="f-date"><span data-s="form.date"></span> <span class="o-opt">(<span data-s="common.optional"></span>)</span></label>
+            <input class="o-in" id="f-date" type="date" dir="ltr" aria-describedby="f-date-help f-date-err">
+            <p class="o-hl" id="f-date-help"></p>
+            <p class="o-er" id="f-date-err" hidden></p>
+          </div>
+
+          <fieldset class="o-f o-set">
+            <legend class="o-lab" data-s="form.contact"></legend>
+            <div class="o-chips">
+              <label class="o-chip"><input type="radio" name="contact" value="WHATSAPP" checked>{{icon:chat}}<span data-s="form.contactWhatsApp"></span></label>
+              <label class="o-chip"><input type="radio" name="contact" value="CALL">{{icon:phone}}<span data-s="form.contactCall"></span></label>
+            </div>
+          </fieldset>
+        </fieldset>
+
+        <p class="o-small o-noid">{{icon:lock}}<span data-s="form.noId"></span></p>
+        <div id="o-turnstile" class="o-turnstile"></div>
+        <button type="submit" class="btn o-submit" id="o-submit"><span class="o-spin" aria-hidden="true"></span><span id="o-submit-text" data-s="form.submit"></span></button>
+        <p class="o-small o-bot" data-s="form.botNote"></p>
+      </form>
+    </section>
+
+    <section class="o-ok" id="o-confirm" hidden>
+      <span class="o-ring">{{icon:check}}</span>
+      <div role="status"><h2 id="o-confirm-title" tabindex="-1" data-s="confirm.title"></h2></div>
+      <p data-s="confirm.body"></p>
+      <div class="o-sum"><p id="o-sum-model"></p><p id="o-sum-branch"></p></div>
+      <div class="o-ok-wa" id="o-confirm-wa" hidden>
+        <a class="btn o-block" id="o-confirm-wa-link" target="_blank" rel="noopener noreferrer">{{icon:chat}}<span data-s="confirm.whatsapp"></span></a>
+        <p class="o-hl" data-s="confirm.whatsappHelp"></p>
+      </div>
+      <button type="button" class="o-txt" id="o-confirm-back" data-s="confirm.back"></button>
+    </section>
+  </div>
+</main>
+<footer class="o-foot">
+  <a href="/" data-href-ar="/" data-href-en="/en/" data-s="footer.by"></a>
+  <a href="/privacy/" data-href-ar="/privacy/" data-href-en="/en/privacy/" data-s="footer.privacy"></a>
+</footer>
+
+<div class="o-sheet-wrap" id="o-sheet" hidden>
+  <div class="o-scrim" data-close></div>
+  <div class="o-sheet" role="dialog" aria-modal="true" aria-labelledby="o-sheet-title" tabindex="-1">
+    <span class="o-handle" aria-hidden="true"></span>
+    <div class="o-sheet-head"><h3 id="o-sheet-title"></h3><button type="button" class="o-txt" data-close data-s="common.close"></button></div>
+    <div class="o-sheet-body" id="o-sheet-body"></div>
+  </div>
+</div>
+
+<template id="ic-pin">{{icon:map-pin}}</template>
+<template id="ic-check">{{icon:check}}</template>
+<template id="ic-link">{{icon:link}}</template>
+<template id="ic-close">{{icon:close}}</template>
+<template id="ic-alert">{{icon:alert}}</template>
+<template id="ic-info">{{icon:info}}</template>
+<template id="ic-chat">{{icon:chat}}</template>

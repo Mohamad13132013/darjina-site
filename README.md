@@ -96,3 +96,40 @@ GitHub Pages, S3 + CloudFront, nginx...). Notes:
 - Long cache for `/assets/`; short cache for `*.html`.
 - `sitemap.xml` uses today's date as `lastmod`; rerun the generator after edits.
 - Local preview: `python -m http.server 8000` inside `website/`, then open http://localhost:8000/.
+
+## Public order page `/o/` (TICKET-047, ADR-0036)
+
+One static page for every shop's online orders: `https://darjina.com/o/<instagram handle>[/<model code>]`
+and the ad-safe form `https://darjina.com/o/?h=<handle>[&m=<code>]` (HTTP 200; use it for paid ads).
+
+How it works:
+- GitHub Pages has no rewrites, so a path link hits `404.html`. Its first `<head>` element (written by
+  `tools/build.py`) matches `^/o/([^/?#]+)(?:/([^/?#]+))?/?$` and calls `location.replace('/o/?h=…&m=…')`
+  (keeps `?lang=` and the `#fragment`). `/o/index.html` lowercases handle and code, restores the clean
+  path with `history.replaceState`, then loads the shop's public document from the Edge Function
+  `online-order` (GET) and sends the request (POST). No Supabase key is used.
+- Files: `tools/pages/o.html` (page source, text ids) -> `o/index.html` (noindex, not in the sitemap,
+  `Disallow: /o/` in robots.txt, Content-Security-Policy), `assets/js/order.js` (vanilla, no framework),
+  `assets/js/order-strings.js` (texts, generated: `python tools/gen_order_strings.py` reads
+  `docs/design/_build/web_copy.py` of the main repository; then `python tools/build.py`),
+  `assets/css/order.css`, `assets/img/abaya-measurements.svg` (copy of the design asset, inlined),
+  `o/config.js`.
+- Owner-written texts are always written as text (`textContent`), never parsed as markup.
+- A new `client_request_id` whenever the form content changes; a resend of the unchanged form (lost
+  answer, bot check failed, rate limit) reuses it, with a fresh Turnstile token each time.
+- Only third-party script: Cloudflare Turnstile. `localStorage` only for the language choice.
+- Test (no browser): `node tools/test_order.mjs` after `python tools/build.py`.
+
+Placeholders in `o/config.js`:
+- `FUNCTION_URL` = `https://xfdrusgoqxohdxjzmucf.supabase.co/functions/v1/online-order` (final; the CSP
+  is built from it, so rebuild after a change).
+- `TURNSTILE_SITE_KEY` = `__TURNSTILE_SITE_KEY__`. While it is the placeholder the page loads no widget
+  and every send shows "We could not confirm that a person sent this request".
+
+Product owner, before pushing this repository (a push publishes darjina.com):
+1. Create the Turnstile widget (hostnames `darjina.com`, `www.darjina.com`), put its **site key** in
+   `o/config.js` (the secret key goes only into the Edge Function secret `TURNSTILE_SECRET_KEY`).
+2. Deploy `online-order` with Verify JWT off and run its checks (main repo `supabase/functions/README.md`).
+3. `python tools/build.py`, `node tools/test_order.mjs`, commit, then `git push darjina-site main`.
+4. Open `https://darjina.com/o/<handle>` and `…/o/?h=<handle>&m=<code>` on a phone; send one test
+   request and reject it in the app.

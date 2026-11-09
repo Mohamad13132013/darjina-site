@@ -10,7 +10,14 @@ Inputs : tools/pages/<lang>/<slug>.html   (page body + a small meta block)
          tools/partials/[<lang>/]<name>.html  (reusable snippets, {{> name}})
 Outputs: /<slug>/index.html (ar), /en/<slug>/index.html (en), 404.html,
          sitemap.xml, robots.txt, site.webmanifest
+
+Public order page (TICKET-047, ADR-0036 section 9): tools/pages/o.html -> o/index.html, one page
+for every shop (Arabic text written here, English switched in place by assets/js/order.js), texts
+from assets/js/order-strings.js (tools/gen_order_strings.py), noindex, not in the sitemap,
+`Disallow: /o/` in robots.txt; 404.html starts with the script that forwards /o/<handle>[/<code>]
+to /o/?h=...&m=... (GitHub Pages has no rewrites).
 """
+import html
 import json
 import re
 from datetime import date
@@ -122,6 +129,11 @@ ICONS = {
     "package": '<path d="M3.5 7.5L12 3l8.5 4.5v9L12 21l-8.5-4.5z"/><path d="M3.5 7.5L12 12l8.5-4.5M12 12v9"/>',
     "branch": '<path d="M3 6.5l6-2.5 6 2.5 6-2.5v13.5l-6 2.5-6-2.5-6 2.5z"/><path d="M9 4v13.5M15 6.5V20"/>',
     "download": '<path d="M12 4v11M7 10.5l5 5 5-5M5 20h14"/>',
+    # order page (/o/, TICKET-047)
+    "minus": '<path d="M5 12h14"/>',
+    "chevron": '<path d="M6 9.5l6 6 6-6"/>',
+    "link": '<path d="M10 14a4.5 4.5 0 0 0 6.4 0l3-3a4.5 4.5 0 0 0-6.4-6.4l-1.2 1.2"/><path d="M14 10a4.5 4.5 0 0 0-6.4 0l-3 3a4.5 4.5 0 0 0 6.4 6.4l1.2-1.2"/>',
+    "image": '<rect x="3" y="4.5" width="18" height="15" rx="2"/><circle cx="8.5" cy="9.5" r="1.6"/><path d="M21 16l-5-5-8.5 8.5"/>',
 }
 
 
@@ -217,6 +229,11 @@ def head(lang, slug, meta):
         "<!doctype html>",
         f'<html lang="{lang}" dir="{s["dir"]}">',
         "<head>",
+    ]
+    if is404 and lang == "ar":
+        # The host's 404 page (root only): the order page's path links land here (ADR-0036 section 2).
+        lines.append(FORWARD_SCRIPT)
+    lines += [
         '<meta charset="utf-8">',
         '<meta name="viewport" content="width=device-width, initial-scale=1">',
         f"<title>{title}</title>",
@@ -328,7 +345,159 @@ def footer(lang):
 """
 
 
+# ---------- Public order page /o/ (TICKET-047) ----------
+
+# Inline, first element of the root 404.html <head> (ADR-0036 section 2): /o/<handle>[/<code>] -> the real
+# page /o/?h=<handle>[&m=<code>] (+ ?lang= and the #fragment); the page restores the clean path.
+FORWARD_SCRIPT = (
+    r'<script>(function(l){var m=/^\/o\/([^\/?#]+)(?:\/([^\/?#]+))?\/?$/.exec(l.pathname);if(!m)return;'
+    r'document.documentElement.style.visibility="hidden";'
+    r'function e(s){try{s=decodeURIComponent(s)}catch(x){}return encodeURIComponent(s)}'
+    r'var g=/[?&]lang=(ar|en)(?:&|$)/.exec(l.search);'
+    r'l.replace("/o/?h="+e(m[1])+(m[2]?"&m="+e(m[2]):"")+(g?"&lang="+g[1]:"")+l.hash)})(location)</script>'
+)
+ORDER_STRINGS_FILE = ROOT / "assets" / "js" / "order-strings.js"
+ORDER_STRINGS_PREFIX = "window.ORDER_STRINGS = "
+ORDER_FONTS = ("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700"
+               "&family=El+Messiri:wght@500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap")
+# The 10 measurement points (ADR-0007 order, copy ids meas.p1..p10) and where the value chip sits on the
+# 360 x 480 picture (designer's positions, docs/design/_build/wf/p_public.py VCHIP).
+MEAS_POINTS = ["full_height", "upper_height", "shoulder_width", "sleeve_length", "sleeve_length_from_neck",
+               "sleeve_width", "armhole", "bust_width", "waist_width", "hip_circumference"]
+MEAS_CHIPS = [(134, 320), (198, 114), (158, 37), (77, 128), (286, 21), (296, 91), (230, 65), (60, 98),
+              (164, 161), (162, 221)]
+
+
+def order_strings():
+    raw = ORDER_STRINGS_FILE.read_text(encoding="utf-8")
+    body = raw[raw.index(ORDER_STRINGS_PREFIX) + len(ORDER_STRINGS_PREFIX):].strip()
+    return json.loads(body.rstrip(";"))
+
+
+def function_origin():
+    """Origin of FUNCTION_URL in o/config.js (Content-Security-Policy connect-src / img-src)."""
+    config = (ROOT / "o" / "config.js").read_text(encoding="utf-8")
+    m = re.search(r'FUNCTION_URL:\s*"(https://[^/"]+)/', config)
+    if not m:
+        raise SystemExit("o/config.js: FUNCTION_URL must be an https URL")
+    return m.group(1)
+
+
+def abaya_svg(svg):
+    """The abaya picture inline so its outline follows the CSS colour; decorative (the picture's label
+    is on its wrapper)."""
+    svg = re.sub(r"<!--.*?-->\s*", "", svg, flags=re.S).strip()
+    svg = re.sub(r'<svg([^>]*?)\swidth="360" height="480"', r'<svg\1', svg, count=1)
+    return svg.replace("<svg ", '<svg class="o-pic-svg" aria-hidden="true" focusable="false" ', 1)
+
+
+def measurements_html():
+    # assets/img/abaya-measurements.svg: copy of docs/design/assets/abaya-measurements.svg
+    svg = (ROOT / "assets" / "img" / "abaya-measurements.svg").read_text(encoding="utf-8")
+    pct = lambda x, y: f"left:{x / 3.6:.3f}%;top:{y / 4.8:.3f}%"
+    spots, rows = [], []
+    for n, key in enumerate(MEAS_POINTS, 1):
+        a = re.search(rf'id="hs-{key}-anchor" cx="([\d.]+)" cy="([\d.]+)"', svg)
+        if not a:
+            raise SystemExit(f"abaya svg: no anchor for {key}")
+        spots.append(f'<button type="button" class="o-hs" data-point="{key}" tabindex="-1" aria-hidden="true" '
+                     f'style="{pct(float(a.group(1)), float(a.group(2)))}">{n}</button>')
+        cx, cy = MEAS_CHIPS[n - 1]
+        spots.append(f'<span class="o-vc" data-chip="{key}" aria-hidden="true" hidden style="{pct(cx, cy)}"></span>')
+        rows.append(
+            f'<div class="o-mr" data-point="{key}"><span class="o-mr-n" aria-hidden="true">{n}</span>'
+            f'<span class="o-mr-lb"><label for="m-{key}" data-s="meas.p{n}"></label>'
+            f'<small id="m-{key}-help" data-s="meas.p{n}Help"></small><span class="o-er" id="m-{key}-err" hidden></span></span>'
+            f'<span class="o-mr-bx"><input id="m-{key}" type="text" inputmode="decimal" dir="ltr" autocomplete="off" '
+            f'maxlength="6" aria-describedby="m-{key}-help m-{key}-err"><span class="o-unit" data-s="meas.unit"></span></span></div>')
+    return (f'<div class="o-pic"><div class="o-pic-img" role="img" data-s-attr="aria-label=meas.pictureAlt">{abaya_svg(svg)}</div>'
+            + "".join(spots) + '</div>\n<div class="o-ml">' + "".join(rows) + "</div>")
+
+
+def fill_texts(text, strings):
+    """Write the Arabic text into every empty element with data-s="<id>" and the attributes named by
+    data-s-attr="attr=<id>;..." (order.js rewrites the same places when the language changes)."""
+    def get(sid):
+        if sid not in strings:
+            raise SystemExit(f"order page: unknown text id {sid}")
+        return html.escape(strings[sid], quote=True)
+    text = re.sub(r'<(\w+)(\s[^>]*?)?\sdata-s="([\w.]+)"([^>]*)></\1>',
+                  lambda m: f'<{m[1]}{m[2] or ""} data-s="{m[3]}"{m[4]}>{get(m[3])}</{m[1]}>', text)
+    text = re.sub(r'data-s-attr="([^"]+)"', lambda m: " ".join(
+        f'{a}="{get(i)}"' for a, i in (p.split("=", 1) for p in m[1].split(";"))) + f' data-s-attr="{m[1]}"', text)
+    left = re.findall(r'data-s="([\w.]+)"[^>]*></', text)
+    if left:
+        raise SystemExit(f"order page: data-s on an element with children or not filled: {left}")
+    return text
+
+
+def order_head(strings):
+    s = S["ar"]
+    origin = function_origin()
+    csp = ("default-src 'self'; script-src 'self' https://challenges.cloudflare.com; "
+           "frame-src https://challenges.cloudflare.com; "
+           f"connect-src 'self' {origin} https://challenges.cloudflare.com; "
+           f"img-src 'self' data: blob: {origin}; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+           "font-src https://fonts.gstatic.com; object-src 'none'; base-uri 'none'; form-action 'none'")
+    title = html.escape(strings["meta.title"], quote=True)
+    desc = html.escape(strings["meta.description"], quote=True)
+    og_img = DOMAIN + "/assets/img/og-image.jpg"
+    return "\n".join([
+        "<!doctype html>",
+        '<html lang="ar" dir="rtl">',
+        "<head>",
+        '<meta charset="utf-8">',
+        '<meta name="viewport" content="width=device-width, initial-scale=1">',
+        f'<meta http-equiv="Content-Security-Policy" content="{csp}">',
+        '<meta name="robots" content="noindex, nofollow">',
+        f"<title>{title}</title>",
+        f'<meta name="description" content="{desc}">',
+        '<meta name="theme-color" content="#0d1413">',
+        '<link rel="icon" href="/favicon.ico" sizes="48x48">',
+        '<link rel="icon" type="image/png" sizes="32x32" href="/assets/img/favicon-32.png">',
+        '<link rel="apple-touch-icon" href="/assets/img/apple-touch-icon.png">',
+        '<meta property="og:type" content="website">',
+        f'<meta property="og:site_name" content="{s["brand"]}">',
+        f'<meta property="og:title" content="{title}">',
+        f'<meta property="og:description" content="{desc}">',
+        f'<meta property="og:url" content="{DOMAIN}/o/">',
+        f'<meta property="og:image" content="{og_img}">',
+        '<meta property="og:image:width" content="1200">',
+        '<meta property="og:image:height" content="630">',
+        f'<meta property="og:image:alt" content="{html.escape(strings["meta.ogImageAlt"], quote=True)}">',
+        f'<meta property="og:locale" content="{s["locale"]}">',
+        '<meta name="twitter:card" content="summary_large_image">',
+        f'<meta name="twitter:title" content="{title}">',
+        f'<meta name="twitter:description" content="{desc}">',
+        f'<meta name="twitter:image" content="{og_img}">',
+        '<link rel="preconnect" href="https://fonts.googleapis.com">',
+        '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>',
+        f'<link rel="stylesheet" href="{ORDER_FONTS}">',
+        '<link rel="stylesheet" href="/assets/css/site.css">',
+        '<link rel="stylesheet" href="/assets/css/order.css">',
+        '<script src="/o/config.js" defer></script>',
+        '<script src="/assets/js/order-strings.js" defer></script>',
+        '<script src="/assets/js/order.js" defer></script>',
+        "</head>",
+    ])
+
+
+def build_order_page():
+    strings = order_strings()
+    body = (TOOLS / "pages" / "o.html").read_text(encoding="utf-8")
+    body = re.sub(r"^\s*<!--.*?-->\s*", "", body, flags=re.S)  # the source's own header comment
+    body = body.replace("{{measurements}}", measurements_html())
+    body = re.sub(r"\{\{icon:([\w-]+)\}\}", lambda m: icon(m.group(1)), body)
+    body = fill_texts(body, strings["ar"])
+    out = ROOT / "o" / "index.html"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(order_head(strings["ar"]) + '\n<body class="o-page">\n' + body.strip() + "\n</body>\n</html>\n",
+                   encoding="utf-8", newline="\n")
+    print("wrote", out.relative_to(ROOT))
+
+
 def build():
+    build_order_page()
     for lang in ("ar", "en"):
         for slug in PAGES:
             if not (TOOLS / "pages" / lang / f"{slug}.html").exists():
@@ -364,7 +533,7 @@ def build():
         'xmlns:xhtml="http://www.w3.org/1999/xhtml">\n' + "\n".join(urls) + "\n</urlset>\n",
         encoding="utf-8", newline="\n")
     (ROOT / "robots.txt").write_text(
-        "User-agent: *\nAllow: /\nDisallow: /tools/\nDisallow: /content/\n\n"
+        "User-agent: *\nAllow: /\nDisallow: /tools/\nDisallow: /content/\nDisallow: /o/\n\n"
         f"Sitemap: {DOMAIN}/sitemap.xml\n", encoding="utf-8", newline="\n")
     manifest = {
         "name": "Darjina", "short_name": "Darjina", "lang": "ar", "dir": "rtl",
