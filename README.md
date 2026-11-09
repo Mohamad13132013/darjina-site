@@ -116,7 +116,12 @@ How it works:
   `o/config.js`.
 - Owner-written texts are always written as text (`textContent`), never parsed as markup.
 - A new `client_request_id` whenever the form content changes; a resend of the unchanged form (lost
-  answer, bot check failed, rate limit) reuses it, with a fresh Turnstile token each time.
+  answer, bot check failed, rate limit) reuses it, with a fresh Turnstile token each time. Switching the
+  page language does not change the content (the language is still sent).
+- Inside another site's frame the page shows "not available" and never the form. A function that is not
+  deployed (platform 404) or that cannot be reached twice in a row (also how a CORS refusal looks) shows
+  "not available" too. A failing image (signed links expire after an hour) re-reads the document, at
+  most once a minute.
 - Only third-party script: Cloudflare Turnstile. `localStorage` only for the language choice.
 - Test (no browser): `node tools/test_order.mjs` after `python tools/build.py`.
 

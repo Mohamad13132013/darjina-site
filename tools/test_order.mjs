@@ -2,7 +2,10 @@
 // Covers the 404 forwarding script as built into 404.html, the page's pure helpers in
 // assets/js/order.js (lowercasing, phone E.164 with the chosen country code, payload building, the
 // client_request_id rule, error-code mapping, WhatsApp texts), the strings file, the built page and
-// robots/sitemap, and that order.js never parses text as markup. Run `python tools/build.py` first.
+// robots/sitemap, and that order.js never parses text as markup. The review fixes of 2026-11-09
+// (ADR-0036 amendment 2, item 21: W1, W4-W6, W8-W10) are tested through their pure helpers; the busy
+// flag (W2), the no-store re-reads (W3) and the page wiring were checked in headless Edge.
+// Run `python tools/build.py` first.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -272,9 +275,180 @@ test('the same id only for a resend of the unchanged form', () => {
   assert.notEqual(fpA, fp({ ...ph, photos: [{ key: 7, b64: 'AAA=' }] }, [7]), 'removed and added again = new content');
   assert.equal(fpA, fp(ph, [1]));
   for (const patch of [{ phone: '36001123' }, { cc: '+966', phone: '551234567' }, { kind: 'pick', chosen: 'm3' }, { branchId: DOC.branches[1].id },
-    { measMode: 'LAST' }, { pieces: '2' }, { date: '2026-12-01' }, { contact: 'CALL' }, { lang: 'en' }, { name: 'Reema' }]) {
+    { measMode: 'LAST' }, { pieces: '2' }, { date: '2026-12-01' }, { contact: 'CALL' }, { name: 'Reema' }]) {
     assert.notEqual(fp({ ...base(), ...patch }), fp(base()), JSON.stringify(patch));
   }
+});
+
+test('W4: the page language is sent but is not part of the fingerprint', () => {
+  const ar = O.buildPayload(base(), DOC);
+  const en = O.buildPayload({ ...base(), lang: 'en' }, DOC);
+  assert.equal(ar.language, 'ar');
+  assert.equal(en.language, 'en', 'still sent');
+  assert.equal(O.fingerprint(en, []), O.fingerprint(ar, []), 'switching the language before a resend keeps the id');
+  const last = { fp: O.fingerprint(ar, []), id: 'id-1' };
+  assert.equal(O.requestIdFor(last, O.fingerprint(en, []), () => 'id-2'), 'id-1');
+  // only the payload's own language field is left out
+  assert.notEqual(O.fingerprint({ ...ar, notes: 'x' }, []), O.fingerprint(ar, []));
+});
+
+// ------------------------------------------------------------------------------------------------
+// Review fixes 2026-11-09 (ADR-0036 amendment 2, item 21)
+
+const tick = () => new Promise((r) => setImmediate(r));
+
+test('W1: a Turnstile waiter that timed out never takes a later token; Retry gets it', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const box = O.createTokenBox(30000);
+  let first = null;
+  box.wait().then((r) => { first = r; });
+  t.mock.timers.tick(29999);
+  await tick();
+  assert.equal(first, null, 'still waiting');
+  t.mock.timers.tick(1);
+  await tick();
+  assert.deepEqual(first, { token: null, timedOut: true });
+  assert.equal(box.waiting.length, 0, 'the timed-out waiter is removed');
+  box.put('tok-late'); // the widget finishes after the timeout
+  assert.equal(box.token, 'tok-late', 'the late token is kept, not taken by the old waiter');
+  assert.deepEqual(await box.wait(), { token: 'tok-late', timedOut: false }, 'Retry uses it at once');
+  assert.equal(box.token, null, 'single use');
+
+  let second = null;
+  box.wait().then((r) => { second = r; });
+  box.put('tok-2');
+  await tick();
+  assert.deepEqual(second, { token: 'tok-2', timedOut: false }, 'a waiter gets the next token');
+  t.mock.timers.tick(30000);
+  await tick();
+  assert.deepEqual(second, { token: 'tok-2', timedOut: false }, 'its timer was cleared');
+
+  let third = null;
+  box.wait().then((r) => { third = r; });
+  box.flush(); // error-callback
+  await tick();
+  assert.deepEqual(third, { token: null, timedOut: false }, 'a check error is not a timeout (the widget is reset)');
+});
+
+test('W6: the fetch timeout covers reading the body, GET and POST', async () => {
+  const calls = [];
+  const hanging = (url, opts) => {
+    calls.push({ url, opts });
+    return Promise.resolve({
+      status: 200, ok: true,
+      json: () => new Promise((_, reject) => opts.signal.addEventListener('abort', () => reject(new Error('aborted')))),
+    });
+  };
+  for (const opts of [{ method: 'GET', cache: 'no-store' }, { method: 'POST', cache: 'no-store', body: '{}' }]) {
+    const started = Date.now();
+    await assert.rejects(O.fetchJson(hanging, 'https://f.test/fn', opts, 40), /timeout/, opts.method);
+    assert.ok(Date.now() - started < 1000, 'rejected by the timer');
+    const c = calls.at(-1);
+    assert.equal(c.opts.signal.aborted, true, 'the request is aborted');
+    assert.equal(c.opts.credentials, 'omit');
+    assert.equal(c.opts.cache, 'no-store');
+    assert.equal(c.opts.method, opts.method);
+  }
+  const ok = await O.fetchJson(() => Promise.resolve({ status: 201, ok: true, json: () => Promise.resolve({ a: 1 }) }), 'u', {}, 1000);
+  assert.deepEqual(ok, { status: 201, ok: true, body: { a: 1 } });
+  const notJson = await O.fetchJson(() => Promise.resolve({ status: 502, ok: false, json: () => Promise.reject(new SyntaxError('x')) }), 'u', {}, 1000);
+  assert.deepEqual(notJson, { status: 502, ok: false, body: null });
+  await assert.rejects(O.fetchJson(() => Promise.reject(new TypeError('Failed to fetch')), 'u', {}, 1000), TypeError);
+  await assert.rejects(O.fetchJson(() => { throw new TypeError('sync'); }, 'u', {}, 1000), TypeError);
+});
+
+test('W10: platform 404 and a failing function end on "not available"; framed pages', () => {
+  assert.equal(O.docResult(404, { code: 'NOT_FOUND', message: 'Requested function was not found' }), 'na', 'function not deployed');
+  assert.equal(O.docResult(404, null), 'na');
+  assert.equal(O.docResult(200, { available: false }), 'na');
+  assert.equal(O.docResult(200, { available: true }), 'ok');
+  assert.equal(O.docResult(200, null), 'error', 'unreadable answer');
+  assert.equal(O.docResult(503, { error: 'server_error' }), 'error', '5xx keeps the load error');
+  assert.equal(O.loadView('offline', 1, true), 'error', 'first failure: load error with Retry');
+  assert.equal(O.loadView('offline', 2, true), 'na', 'again after Retry (CORS refusal, unreachable): not available');
+  assert.equal(O.loadView('offline', 2, undefined), 'na');
+  assert.equal(O.loadView('offline', 3, false), 'error', 'the browser is offline: keep the load error');
+  for (const r of ['ok', 'na', 'error']) assert.equal(O.loadView(r, 5, true), r);
+  const self = {};
+  self.top = self;
+  self.self = self;
+  assert.equal(O.isFramed(self), false);
+  assert.equal(O.isFramed({ self: {}, top: {} }), true);
+  assert.equal(O.isFramed({ self: {}, get top() { throw new Error('cross-origin'); } }), true);
+});
+
+test('W8: after a re-fetch the page checks again; one branch left, no models left', () => {
+  const form = { kind: 'pick', chosen: 'm1', branchId: DOC.branches[0].id };
+  const oneBranch = { ...DOC, branches: [DOC.branches[1]] };
+  assert.deepEqual(O.afterRefresh(form, oneBranch), { kind: 'pick', chosen: 'm1', branchId: null, lostModel: false });
+  const v1 = { ...base(), branchId: null };
+  const branchRefusal = O.outcome(400, { error: 'branch_inactive' });
+  assert.deepEqual(O.refusalErrors(branchRefusal, v1, oneBranch, true), {}, 'one branch left: no branch error (the server sets it)');
+  assert.deepEqual(O.refusalErrors(branchRefusal, v1, oneBranch, false), {}, 'not even when the re-fetch failed');
+  const twoOther = { ...DOC, branches: [DOC.branches[1], { id: '33333333-3333-4333-8333-333333333333', name: 'x', location: null }] };
+  assert.equal(O.refusalErrors(branchRefusal, v1, twoOther, true).branch.id, 'err.branchRequired');
+  assert.equal(O.refusalErrors(branchRefusal, base(), DOC, false).branch.id, 'err.branchRequired', 're-fetch failed: the server error stays');
+
+  const noModels = { ...DOC, models: [] };
+  const kept = O.afterRefresh(form, noModels);
+  assert.deepEqual(kept, { kind: null, chosen: null, branchId: form.branchId, lostModel: true });
+  const e = O.refusalErrors(O.outcome(400, { error: 'invalid_input' }), { ...base(), kind: kept.kind, chosen: kept.chosen }, noModels, true);
+  assert.deepEqual(Object.keys(e), ['model']);
+  assert.equal(e.model.id, 'err.modelRequired');
+  const gone = O.afterRefresh({ kind: 'pick', chosen: 'm1', branchId: null }, { ...DOC, models: [DOC.models[0]] });
+  assert.deepEqual(gone, { kind: 'pick', chosen: null, branchId: null, lostModel: true });
+  assert.equal(O.refusalErrors({ kind: 'refresh' }, { ...base(), chosen: null }, DOC, true).model.id, 'err.modelRequired');
+  assert.deepEqual(O.refusalErrors({ kind: 'refresh' }, base(), DOC, true), {}, 'nothing left to mark: the page shows send.server');
+
+  const later = { ...DOC, min_desired_date: '2026-11-25' };
+  const dateRefusal = O.outcome(400, { error: 'desired_date_too_early' });
+  const d = O.refusalErrors(dateRefusal, { ...base(), date: '2026-11-24' }, later, true);
+  assert.deepEqual(d.date, { id: 'err.dateEarly', vars: { date: { text: '25/11/2026', ltr: true } } }, 'the new minimum date');
+  assert.equal(O.refusalErrors(dateRefusal, { ...base(), date: '2026-11-24' }, DOC, false).date.vars.date.text, '23/11/2026');
+  const both = O.refusalErrors(dateRefusal, { ...base(), date: '2026-11-24', phone: '1' }, later, true);
+  assert.deepEqual(Object.keys(both), ['phone', 'date'], 'every field error of the page is shown');
+});
+
+test('W5: stored image size, resize options, one photo at a time, error ids', async () => {
+  assert.deepEqual(O.imageSize(new Uint8Array(readFileSync(join(ROOT, 'assets/img/og-image.jpg')))), { width: 1200, height: 630 });
+  assert.deepEqual(O.imageSize(new Uint8Array(readFileSync(join(ROOT, 'assets/img/mark-512.png')))), { width: 512, height: 512 });
+  // APP1 block, fill byte, DHT (C4, not a frame), then SOF2 4000 x 3000
+  const jpg = new Uint8Array([0xff, 0xd8, 0xff, 0xe1, 0x00, 0x04, 0x45, 0x78, 0xff, 0xff, 0xc4, 0x00, 0x03, 0x00,
+    0xff, 0xc2, 0x00, 0x11, 0x08, 0x0b, 0xb8, 0x0f, 0xa0, 0x03]);
+  assert.deepEqual(O.imageSize(jpg), { width: 4000, height: 3000 });
+  assert.equal(O.imageSize(jpg.slice(0, 14)), null, 'size beyond the bytes read');
+  assert.equal(O.imageSize(new Uint8Array([0x47, 0x49, 0x46, 0x38])), null);
+  assert.deepEqual(O.bitmapResize({ width: 4000, height: 3000 }, 1600), { resizeWidth: 1600, resizeQuality: 'high' });
+  assert.deepEqual(O.bitmapResize({ width: 3000, height: 4000 }, 1600), { resizeHeight: 1600, resizeQuality: 'high' });
+  assert.equal(O.bitmapResize({ width: 1600, height: 900 }, 1600), null);
+  assert.equal(O.bitmapResize(null, 1600), null);
+  assert.equal(O.photoErrorId(new Error('type')), 'err.photoType');
+  for (const m of ['memory', 'large', 'other']) assert.equal(O.photoErrorId(new Error(m)), 'err.photoLarge', m);
+
+  const queue = O.createQueue();
+  let active = 0;
+  let most = 0;
+  const order = [];
+  const task = (n, fail) => () => new Promise((resolve, reject) => {
+    active += 1;
+    most = Math.max(most, active);
+    order.push('start ' + n);
+    setTimeout(() => { active -= 1; order.push('end ' + n); (fail ? reject : resolve)(n); }, 5);
+  });
+  const runs = [queue(task(1)), queue(task(2, true)), queue(task(3))];
+  const settled = await Promise.allSettled(runs);
+  assert.equal(most, 1, 'never two photos at once');
+  assert.deepEqual(order, ['start 1', 'end 1', 'start 2', 'end 2', 'start 3', 'end 3']);
+  assert.deepEqual(settled.map((s) => s.status), ['fulfilled', 'rejected', 'fulfilled'], 'a failed photo does not stop the next');
+});
+
+test('W9: a failing image re-reads the document at most once a minute', () => {
+  const allow = O.createThrottle(60000);
+  assert.equal(allow(1000), true);
+  assert.equal(allow(1001), false, 'several images failing together: one re-fetch');
+  assert.equal(allow(60999), false);
+  assert.equal(allow(61000), true);
+  assert.equal(allow(61001), false);
 });
 
 test('uuid v4 with and without crypto.randomUUID', () => {

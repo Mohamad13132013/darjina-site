@@ -12,7 +12,10 @@
    - client_request_id: one id per form content; a resend of the unchanged form reuses it (lost answer,
      bot-check failure, rate limit), any change of the content gives a new one (amendment 2, item 15).
      A replay answer {request_id, replayed: true} shows the confirmation like a first answer.
-   - Turnstile tokens are single use: every send asks the widget for a fresh one and resets it after.
+   - Turnstile tokens are single use: every send asks the widget for a fresh one and resets it after the
+     send or a check error, never after a token timeout (amendment 2, item 21).
+   - The page refuses to show the form inside another site's frame; an unreachable or undeployed
+     function ends on the "not available" page after one Retry (item 21).
    - localStorage only for the language choice (try/catch). No other third-party script, no analytics.
 
    Vanilla JS, no build step. The pure helpers at the top are exported for tools/test_order.mjs (Node,
@@ -42,9 +45,13 @@
   const MAX_PHOTO_BYTES = 1572864;
   const MAX_PHOTO_SIDE = 1600;
   const JPEG_QUALITIES = [0.85, 0.75, 0.65, 0.55, 0.45, 0.35];
+  /** Bytes read before decoding: the magic bytes and the stored size (a JPEG's EXIF block comes first). */
+  const HEAD_BYTES = 262144;
   const GET_TIMEOUT_MS = 20000;
   const POST_TIMEOUT_MS = 60000;
   const TOKEN_TIMEOUT_MS = 30000;
+  /** Signed photo links expire after an hour: a failing image re-reads the document at most this often. */
+  const IMAGE_REFRESH_MS = 60000;
   const TURNSTILE_SRC = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
   /** Shared with assets/js/site.js (the marketing pages remember the same choice). */
   const LANG_KEY = 'darjina-lang';
@@ -197,6 +204,171 @@
     if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return 'jpg';
     if (bytes.length >= 4 && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47) return 'png';
     return null;
+  }
+
+  /** The stored {width, height} of a JPEG (first SOF marker) or PNG (IHDR) from its first bytes; null
+   * when it is not found there. EXIF orientation is not applied. */
+  function imageSize(bytes) {
+    const be16 = function (i) { return (bytes[i] << 8) | bytes[i + 1]; };
+    const kind = sniffImage(bytes);
+    if (kind === 'png') {
+      if (bytes.length < 24) return null;
+      const be32 = function (i) { return ((bytes[i] << 24) >>> 0) + (bytes[i + 1] << 16) + (bytes[i + 2] << 8) + bytes[i + 3]; };
+      const width = be32(16);
+      const height = be32(20);
+      return width > 0 && height > 0 ? { width: width, height: height } : null;
+    }
+    if (kind !== 'jpg') return null;
+    let i = 2;
+    while (i + 3 < bytes.length) {
+      if (bytes[i] !== 0xff) return null;
+      const marker = bytes[i + 1];
+      if (marker === 0xff) { i += 1; continue; } // fill byte
+      if (marker === 0x01 || (marker >= 0xd0 && marker <= 0xd9)) { i += 2; continue; } // no length
+      // SOF0..SOF15 except DHT (C4), JPG (C8) and DAC (CC)
+      if (marker >= 0xc0 && marker <= 0xcf && marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc) {
+        if (i + 8 >= bytes.length) return null;
+        const height = be16(i + 5);
+        const width = be16(i + 7);
+        return width > 0 && height > 0 ? { width: width, height: height } : null;
+      }
+      i += 2 + be16(i + 2);
+    }
+    return null;
+  }
+
+  /** createImageBitmap resize options (W5): only the longer stored side is given, so the browser keeps
+   * the aspect ratio whatever the EXIF orientation does (the canvas step shrinks the rest); null when
+   * no shrinking is needed or the size is unknown. */
+  function bitmapResize(size, max) {
+    if (!size || !(size.width > 0) || !(size.height > 0) || Math.max(size.width, size.height) <= max) return null;
+    return size.width >= size.height ? { resizeWidth: max, resizeQuality: 'high' } : { resizeHeight: max, resizeQuality: 'high' };
+  }
+
+  /** The photo error for a failed preparation: the type error only when the file is not a JPEG or PNG
+   * the browser can decode; anything else (no memory for the canvas, an empty toBlob, still too large)
+   * is the size error, the closest text the copy has. */
+  function photoErrorId(error) {
+    return error && error.message === 'type' ? 'err.photoType' : 'err.photoLarge';
+  }
+
+  /** A runner that starts each task only after the previous one settled (W5: one photo at a time). */
+  function createQueue() {
+    let tail = Promise.resolve();
+    return function (task) {
+      const run = tail.then(function () { return task(); });
+      tail = run.then(null, function () { /* the next task runs anyway */ });
+      return run;
+    };
+  }
+
+  /** True at most once per [ms] (the first call always). */
+  function createThrottle(ms) {
+    let last = null;
+    return function (now) {
+      if (last !== null && now - last < ms) return false;
+      last = now;
+      return true;
+    };
+  }
+
+  /**
+   * The Turnstile token store (W1). put() keeps a token and wakes the waiters; wait() answers
+   * {token, timedOut}: a token at once when one is kept, else the next one, or {token: null, timedOut:
+   * true} after [ms]. A waiter that timed out is removed and settled, so it never takes a later token;
+   * that token stays for the next wait() (Retry). flush() wakes the waiters without a token (error).
+   */
+  function createTokenBox(ms) {
+    const box = { token: null, waiting: [] };
+    box.take = function () {
+      const tok = box.token;
+      box.token = null;
+      return tok;
+    };
+    box.clear = function () { box.token = null; };
+    box.flush = function () {
+      const waiting = box.waiting;
+      box.waiting = [];
+      waiting.forEach(function (w) { w(); });
+    };
+    box.put = function (tok) {
+      box.token = tok || null;
+      box.flush();
+    };
+    box.wait = function () {
+      if (box.token) return Promise.resolve({ token: box.take(), timedOut: false });
+      return new Promise(function (resolve) {
+        let settled = false;
+        const waiter = function () {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timer);
+          resolve({ token: box.take(), timedOut: false });
+        };
+        const timer = setTimeout(function () {
+          if (settled) return;
+          settled = true;
+          box.waiting = box.waiting.filter(function (w) { return w !== waiter; });
+          resolve({ token: null, timedOut: true });
+        }, ms);
+        box.waiting.push(waiter);
+      });
+    };
+    return box;
+  }
+
+  /**
+   * fetch and read the JSON body under one timeout (W6): {status, ok, body}, body null when the answer
+   * is not JSON. Rejects on a network or CORS failure and on the timeout, also while the body is read.
+   */
+  function fetchJson(fetchFn, url, options, ms) {
+    const ctrl = typeof AbortController === 'function' ? new AbortController() : null;
+    return new Promise(function (resolve, reject) {
+      let done = false;
+      const finish = function (fn, value) {
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        fn(value);
+      };
+      const timer = setTimeout(function () {
+        if (ctrl) ctrl.abort();
+        finish(reject, new Error('timeout'));
+      }, ms);
+      Promise.resolve().then(function () {
+        return fetchFn(url, Object.assign({ credentials: 'omit', signal: ctrl ? ctrl.signal : undefined }, options));
+      }).then(function (res) {
+        return Promise.resolve().then(function () { return res.json(); })
+          .then(null, function () { return null; })
+          .then(function (body) { return { status: res.status, ok: res.ok, body: body }; });
+      }).then(function (r) { finish(resolve, r); }, function (e) { finish(reject, e); });
+    });
+  }
+
+  /** The page document answer: 'ok', 'na' (page off or unknown, or 404: the platform's answer while
+   * the function is not deployed) or 'error' (5xx, an unreadable answer). */
+  function docResult(status, body) {
+    if (status === 404) return 'na';
+    if (status < 200 || status >= 300 || !body || typeof body !== 'object') return 'error';
+    return body.available === true ? 'ok' : 'na';
+  }
+
+  /** The view after loading the document (W10): [result] is a docResult or 'offline' (no answer, which
+   * is also how a CORS refusal looks); [failures] counts the loads in a row without an answer. The
+   * first shows the load error with Retry; the same after Retry shows "not available" (an unreachable
+   * or undeployed function), unless the browser knows it is offline. */
+  function loadView(result, failures, online) {
+    if (result !== 'offline') return result;
+    return failures >= 2 && online !== false ? 'na' : 'error';
+  }
+
+  /** A page shown inside another site's frame (W10); an unreadable top counts as framed. */
+  function isFramed(w) {
+    try {
+      return w.top !== w.self;
+    } catch (e) {
+      return true;
+    }
   }
 
   /** UUID v4 (crypto.randomUUID, else getRandomValues). */
@@ -363,8 +535,35 @@
     const pieces = westernDigits(trimText(v.pieces));
     if (!/^\d{1,2}$/.test(pieces) || Number(pieces) < 1) e.pieces = { id: 'err.pieces' };
     if (charLength(trimText(v.notes)) > 500) e.notes = { id: 'err.notesLong' };
-    if (v.date && (!DATE.test(v.date) || (doc.min_desired_date && v.date < doc.min_desired_date))) {
-      e.date = { id: 'err.dateEarly', vars: { date: { text: formatDate(doc.min_desired_date), ltr: true } } };
+    if (v.date && (!DATE.test(v.date) || (doc.min_desired_date && v.date < doc.min_desired_date))) e.date = dateEarly(doc);
+    return e;
+  }
+  function dateEarly(doc) {
+    return { id: 'err.dateEarly', vars: { date: { text: formatDate(doc.min_desired_date), ltr: true } } };
+  }
+
+  /** What of the form stays with a new document (W8): the chosen model and the branch only while still
+   * offered; with no model left, no way of naming the model stays chosen. [form]: {kind, chosen,
+   * branchId}. lostModel: the chosen model is gone (the page shows the unavailable note). */
+  function afterRefresh(form, doc) {
+    const models = doc.models || [];
+    const kept = !!form.chosen && models.some(function (m) { return m.code === form.chosen; });
+    return {
+      kind: form.kind === 'pick' && models.length === 0 ? null : form.kind,
+      chosen: kept ? form.chosen : null,
+      branchId: form.branchId && (doc.branches || []).some(function (b) { return b.id === form.branchId; }) ? form.branchId : null,
+      lostModel: !!form.chosen && !kept,
+    };
+  }
+
+  /** Field errors after a refusal that re-reads the document (W8; outcome kind 'refresh' or refresh:
+   * true): the page's own checks against that document. The server's field error is added only when
+   * the document could not be re-read ([fresh] false) and the field still exists (the branch question
+   * needs 2 or more branches). Empty: the new document already answers the refusal. */
+  function refusalErrors(o, v, doc, fresh) {
+    const e = validate(v, doc);
+    if (o.kind === 'field' && !fresh && !e[o.field] && (o.field !== 'branch' || (doc.branches || []).length > 1)) {
+      e[o.field] = o.field === 'date' ? dateEarly(doc) : { id: o.error };
     }
     return e;
   }
@@ -402,10 +601,11 @@
   }
 
   /** What identifies the form content: the payload with each photo by its key (a photo, once added,
-   * never changes; a removed and added again photo gets a new key). */
+   * never changes; a removed and added again photo gets a new key). The page language is sent but is
+   * not content (W4): switching it before a resend keeps the id. */
   function fingerprint(payload, photoKeys) {
     return JSON.stringify([payload, photoKeys || []], function (k, val) {
-      return k === 'data_base64' ? undefined : val;
+      return k === 'data_base64' || (k === 'language' && this === payload) ? undefined : val;
     });
   }
 
@@ -460,6 +660,7 @@
     const CFG = win.ORDER_CONFIG || {};
     const $ = function (id) { return doc.getElementById(id); };
     const html = doc.documentElement;
+    const framed = isFramed(win);
     html.classList.add('js');
     if ('scrollRestoration' in win.history) win.history.scrollRestoration = 'manual';
 
@@ -569,43 +770,39 @@
     }
 
     // ---- loading the page document ----
-    async function fetchWithTimeout(url, options, ms) {
-      const ctrl = typeof AbortController === 'function' ? new AbortController() : null;
-      const timer = ctrl ? setTimeout(function () { ctrl.abort(); }, ms) : null;
-      try {
-        return await win.fetch(url, Object.assign({ credentials: 'omit', signal: ctrl ? ctrl.signal : undefined }, options));
-      } finally {
-        if (timer) clearTimeout(timer);
-      }
-    }
+    const fetchFn = function (url, options) { return win.fetch(url, options); };
     function pageUrl() {
       return CFG.FUNCTION_URL + '?h=' + encodeURIComponent(st.h) + (st.m ? '&m=' + encodeURIComponent(st.m) : '');
     }
-    /** GET the document: 'ok' (st.doc set), 'na', or 'error'. */
-    async function fetchDoc() {
-      let res;
-      let body;
+    /** GET the document: 'ok' (st.doc set), 'na', 'error' or 'offline' (no answer). [fresh]: past the
+     * browser cache (W3: re-reads after a refusal or a failing image). */
+    async function fetchDoc(fresh) {
+      let r;
       try {
-        res = await fetchWithTimeout(pageUrl(), { method: 'GET' }, GET_TIMEOUT_MS);
-        if (!res.ok) return 'error';
-        body = await res.json();
+        r = await fetchJson(fetchFn, pageUrl(), fresh ? { method: 'GET', cache: 'no-store' } : { method: 'GET' }, GET_TIMEOUT_MS);
       } catch (e) {
-        return 'error';
+        return 'offline';
       }
-      if (!body || body.available !== true) return 'na';
-      st.doc = sanitizeDoc(body, win.location.protocol);
+      const kind = docResult(r.status, r.body);
+      if (kind !== 'ok') return kind;
+      st.doc = sanitizeDoc(r.body, win.location.protocol);
       if (st.doc.handle && st.doc.handle !== st.h) {
         st.h = st.doc.handle; // an alias: show the current handle (ADR-0036 section 4)
         updateUrl();
       }
       return 'ok';
     }
-    async function load() {
+    let loadFailures = 0;
+    /** [retried]: from the load error's Retry (past the cache). */
+    async function load(retried) {
       showView('loading');
-      if (!st.h || !CFG.FUNCTION_URL) { showNa(); return; }
-      const r = await fetchDoc();
-      if (r === 'na') { showNa(); return; }
-      if (r === 'error') { showView('error'); return; }
+      // W10: inside another site's frame the form is never shown.
+      if (framed || !st.h || !CFG.FUNCTION_URL) { showNa(); return; }
+      const r = await fetchDoc(retried === true);
+      loadFailures = r === 'offline' ? loadFailures + 1 : 0;
+      const view = loadView(r, loadFailures, win.navigator.onLine);
+      if (view === 'na') { showNa(); return; }
+      if (view === 'error') { showView('error'); return; }
       resetForm(true);
       showView('shop');
       renderAll();
@@ -683,7 +880,7 @@
       $('o-shop-name').textContent = shop.name;
       const logo = $('o-logo');
       if (shop.logo_url) {
-        setChildren(logo, [el('img', { src: shop.logo_url, alt: fillText(t('shop.logoAlt'), { shopName: shop.name }) })]);
+        setChildren(logo, [el('img', { onerror: onImageError, src: shop.logo_url, alt: fillText(t('shop.logoAlt'), { shopName: shop.name }) })]);
         logo.removeAttribute('aria-hidden');
       } else {
         setChildren(logo, [doc.createTextNode(Array.from(shop.name.trim())[0] || '')]);
@@ -722,7 +919,7 @@
         return el('span', { class: 'o-ph o-ph--ig', 'aria-hidden': 'true' }, [icon('link'), el('span', { text: 'Instagram' })]);
       }
       const img = el('img', {
-        src: m.photo_urls[index], loading: 'lazy', decoding: 'async',
+        onerror: onImageError, src: m.photo_urls[index], loading: 'lazy', decoding: 'async',
         alt: fillText(t('model.photoAlt'), { index: String(index + 1), count: String(n), name: m.name }),
       });
       const cnt = n > 1 && mode !== 'thumb' ? el('span', { class: 'o-cnt', dir: 'ltr', 'aria-hidden': 'true', text: (index + 1) + '/' + n }) : null;
@@ -986,44 +1183,74 @@
       return new Promise(function (resolve, reject) {
         const r = new FileReader();
         r.onload = function () { resolve(String(r.result).replace(/^data:[^,]*,/, '')); };
-        r.onerror = function () { reject(new Error('type')); };
+        r.onerror = function () { reject(new Error('memory')); };
         r.readAsDataURL(blob);
       });
     }
-    /** BR-109: JPEG or PNG only (by content), shrunk to <= 1600 px, JPEG quality stepped down until
-     * <= 1.5 MiB. Throws Error('type') or Error('large'). */
-    async function preparePhoto(file) {
-      if (!sniffImage(await readBytes(file.slice(0, 8)))) throw new Error('type');
-      const img = await decodeImage(file);
-      const size = shrinkSize(img.naturalWidth, img.naturalHeight, MAX_PHOTO_SIDE);
-      const canvas = doc.createElement('canvas');
-      canvas.width = size.width;
-      canvas.height = size.height;
-      const ctx = canvas.getContext('2d');
-      ctx.fillStyle = '#ffffff'; // a transparent PNG becomes a JPEG on white
-      ctx.fillRect(0, 0, size.width, size.height);
-      ctx.drawImage(img, 0, 0, size.width, size.height);
-      let blob = null;
-      for (const q of JPEG_QUALITIES) {
-        blob = await canvasBlob(canvas, q);
-        if (blob && blob.size <= MAX_PHOTO_BYTES) break;
+    /** The decoded photo {source, width, height, release}: createImageBitmap already shrunk where the
+     * browser has it (W5), else an <img>. */
+    async function decodePhoto(file, head) {
+      if (typeof win.createImageBitmap === 'function') {
+        try {
+          const bmp = await win.createImageBitmap(file, Object.assign({ imageOrientation: 'from-image' },
+            bitmapResize(imageSize(head), MAX_PHOTO_SIDE)));
+          return { source: bmp, width: bmp.width, height: bmp.height, release: function () { if (bmp.close) bmp.close(); } };
+        } catch (e) {
+          // an older browser (option values) or a file it decodes only as an <img>
+        }
       }
-      if (!blob) throw new Error('type');
-      if (blob.size > MAX_PHOTO_BYTES) throw new Error('large');
-      return { blob: blob, b64: await blobBase64(blob) };
+      const img = await decodeImage(file);
+      return { source: img, width: img.naturalWidth, height: img.naturalHeight, release: function () { img.removeAttribute('src'); } };
     }
+    /** BR-109: JPEG or PNG only (by content), shrunk to <= 1600 px, JPEG quality stepped down until
+     * <= 1.5 MiB. Throws Error('type'), Error('large') or Error('memory') (no canvas, empty toBlob). The
+     * decoded image and the canvas are released before it returns. */
+    async function preparePhoto(file) {
+      const head = await readBytes(file.slice(0, HEAD_BYTES));
+      if (!sniffImage(head)) throw new Error('type');
+      const pic = await decodePhoto(file, head);
+      const canvas = doc.createElement('canvas');
+      try {
+        const size = shrinkSize(pic.width, pic.height, MAX_PHOTO_SIDE);
+        canvas.width = size.width;
+        canvas.height = size.height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) throw new Error('memory');
+        ctx.fillStyle = '#ffffff'; // a transparent PNG becomes a JPEG on white
+        ctx.fillRect(0, 0, size.width, size.height);
+        ctx.drawImage(pic.source, 0, 0, size.width, size.height);
+        pic.release();
+        let blob = null;
+        for (const q of JPEG_QUALITIES) {
+          blob = await canvasBlob(canvas, q);
+          if (!blob) throw new Error('memory'); // the browser could not encode it (out of memory)
+          if (blob.size <= MAX_PHOTO_BYTES) break;
+        }
+        if (blob.size > MAX_PHOTO_BYTES) throw new Error('large');
+        return { blob: blob, b64: await blobBase64(blob) };
+      } finally {
+        pic.release();
+        canvas.width = 0;
+        canvas.height = 0;
+      }
+    }
+    const photoQueue = createQueue();
     function addFiles(files) {
       st.photoError = null;
       Array.from(files).forEach(function (file) {
         if (st.photos.length >= MAX_PHOTOS) { st.photoError = 'err.photoMax'; return; }
         const entry = { key: ++st.seq, status: 'busy', b64: null, url: null };
-        entry.promise = preparePhoto(file).then(function (r) {
+        const kept = function () { return st.photos.indexOf(entry) >= 0; };
+        // W5: one photo at a time; a photo removed while it waits is not prepared.
+        entry.promise = photoQueue(function () { return kept() ? preparePhoto(file) : null; }).then(function (r) {
+          if (!r || !kept()) return;
           entry.b64 = r.b64;
           entry.url = URL.createObjectURL(r.blob);
           entry.status = 'ready';
         }, function (e) {
+          if (!kept()) return;
           st.photos = st.photos.filter(function (p) { return p !== entry; });
-          st.photoError = e && e.message === 'large' ? 'err.photoLarge' : 'err.photoType';
+          st.photoError = photoErrorId(e);
         }).then(function () {
           if (st.photos.some(function (p) { return p.status === 'ready'; })) delete st.errors.model;
           renderPhotos();
@@ -1044,8 +1271,9 @@
     }
 
     // ---- bot check (Cloudflare Turnstile, explicit render; ADR-0036 section 5 step 2) ----
+    const tokens = createTokenBox(TOKEN_TIMEOUT_MS);
     const bot = {
-      id: null, token: null, waiting: [], state: 'off',
+      id: null, state: 'off',
       configured: function () {
         const k = CFG.TURNSTILE_SITE_KEY;
         return typeof k === 'string' && k !== '' && !/^__.*__$/.test(k);
@@ -1069,39 +1297,29 @@
             theme: 'light',
             appearance: 'interaction-only',
             'refresh-expired': 'auto',
-            callback: function (token) { bot.token = token; bot.flush(); },
-            'expired-callback': function () { bot.token = null; },
-            'error-callback': function () { bot.token = null; bot.flush(); },
+            callback: function (token) { tokens.put(token); },
+            'expired-callback': function () { tokens.clear(); },
+            'error-callback': function () { tokens.clear(); tokens.flush(); },
           });
           bot.state = 'ready';
         } catch (e) {
           bot.fail();
         }
       },
-      fail: function () { bot.state = 'failed'; bot.flush(); },
-      flush: function () {
-        const waiting = bot.waiting;
-        bot.waiting = [];
-        waiting.forEach(function (w) { w(); });
-      },
-      take: function () {
-        const tok = bot.token;
-        bot.token = null;
-        return tok;
-      },
-      /** A fresh single-use token, or null (placeholder key, script blocked, check failed, timeout). */
+      fail: function () { bot.state = 'failed'; tokens.flush(); },
+      /** {token, timedOut}: a fresh single-use token, or token null (placeholder key, script blocked,
+       * check failed; timedOut when no token came in time, the widget may still deliver one). */
       get: function () {
-        if (!bot.configured()) return Promise.resolve(null);
+        const none = { token: null, timedOut: false };
+        if (!bot.configured()) return Promise.resolve(none);
         if (bot.state === 'failed' || bot.state === 'off') { bot.state = 'off'; bot.init(); }
-        if (bot.token) return Promise.resolve(bot.take());
-        return new Promise(function (resolve) {
-          const timer = setTimeout(function () { resolve(null); }, TOKEN_TIMEOUT_MS);
-          bot.waiting.push(function () { clearTimeout(timer); resolve(bot.take()); });
-        });
+        if (bot.state === 'failed') return Promise.resolve(none);
+        return tokens.wait();
       },
-      /** After every send: the token was spent (or may have been). */
+      /** After a send or a check error: the token was spent (or may have been); a new check starts.
+       * Never after a timeout (W1): no token was spent and the running check would be thrown away. */
       reset: function () {
-        bot.token = null;
+        tokens.clear();
         if (bot.id !== null && win.turnstile) {
           try { win.turnstile.reset(bot.id); } catch (e) { /* widget gone */ }
         }
@@ -1135,8 +1353,36 @@
       if (n) { scrollToNode($('o-alert')); n.focus({ preventScroll: true }); }
     }
 
+    /**
+     * W2: busy from the first tap, before any wait (photos still being prepared, the bot check, the
+     * answer), and idle again on every way out; the button stays disabled meanwhile. The steps answer
+     * what to show, which runs once the form is enabled again (focus cannot go into a disabled form).
+     */
     async function submit() {
       if (st.sending || !st.doc) return;
+      setSending(true);
+      let show;
+      try {
+        show = await attempt();
+      } catch (e) {
+        st.alert = { alert: 'send.server', retry: true };
+        show = showAlert;
+      } finally {
+        setSending(false);
+      }
+      show();
+    }
+    function retry() { submit(); }
+    function showAlert() {
+      renderAlert();
+      focusAlert();
+    }
+    function showFieldErrors() {
+      renderErrors();
+      focusFirstError();
+    }
+
+    async function attempt() {
       await Promise.all(st.photos.map(function (p) { return p.promise; }));
       const v = values();
       st.alert = null;
@@ -1144,48 +1390,37 @@
       st.summary = Object.keys(st.errors).length ? 'form.errorSummary' : null;
       renderErrors();
       renderAlert();
-      if (st.summary) { focusFirstError(); return; }
-      await send(v);
+      if (st.summary) return focusFirstError;
+      return send(v);
     }
-    function retry() { submit(); }
 
     async function send(v) {
       const payload = buildPayload(v, st.doc);
       const fp = fingerprint(payload, v.photos.map(function (p) { return p.key; }));
       const id = requestIdFor(st.last, fp, function () { return uuidv4(win.crypto); });
       st.last = { fp: fp, id: id };
-      setSending(true);
-      renderAlert();
-      const token = await bot.get();
-      if (!token) {
-        setSending(false);
-        bot.reset();
+      const got = await bot.get();
+      if (!got.token) {
+        if (!got.timedOut) bot.reset(); // W1: a timeout spent no token; the running check goes on
         st.alert = { alert: 'send.botFailed', retry: true };
-        renderAlert();
-        focusAlert();
-        return;
+        return showAlert;
       }
-      const body = Object.assign({ client_request_id: id }, payload, { turnstile_token: token });
+      const body = Object.assign({ client_request_id: id }, payload, { turnstile_token: got.token });
       let res;
       try {
-        res = await fetchWithTimeout(CFG.FUNCTION_URL, {
+        res = await fetchJson(fetchFn, CFG.FUNCTION_URL, {
           method: 'POST', cache: 'no-store', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
         }, POST_TIMEOUT_MS);
       } catch (e) {
         bot.reset();
-        setSending(false);
         st.alert = { alert: 'send.offline', retry: true };
-        renderAlert();
-        focusAlert();
-        return;
+        return showAlert;
       }
       bot.reset();
-      let data = null;
-      try { data = await res.json(); } catch (e) { data = null; }
-      setSending(false);
-      await handle(outcome(res.status, data), v, payload);
+      return handle(outcome(res.status, res.body), v, payload);
     }
 
+    /** The answer's effect on the state; answers what to show. */
     async function handle(o, v, payload) {
       if (o.kind === 'ok') {
         const m = payload.model_code ? modelByCode(payload.model_code) : null;
@@ -1194,61 +1429,69 @@
           kind: v.kind, code: m ? m.code : null, name: m ? m.name : null, url: payload.instagram_url || null,
           branchName: branch ? branch.name : null, customerName: payload.customer_name, lang: payload.language,
         };
-        renderShop();
-        renderConfirm();
-        win.scrollTo(0, 0);
-        $('o-confirm-title').focus({ preventScroll: true });
-        return;
+        return function () {
+          renderShop();
+          renderConfirm();
+          win.scrollTo(0, 0);
+          $('o-confirm-title').focus({ preventScroll: true });
+        };
       }
-      if (o.kind === 'na') { showNa(); return; }
+      if (o.kind === 'na') return showNa;
       if (o.kind === 'alert') {
         st.alert = o;
-        renderAlert();
-        focusAlert();
-        return;
+        return showAlert;
       }
       if (o.kind === 'refresh' || o.refresh) {
-        const r = await fetchDoc();
-        if (r === 'na') { showNa(); return; }
+        // W3, W8: the current document (no cache), then the page's own checks against it.
+        const r = await fetchDoc(true);
+        if (r === 'na') return showNa;
         if (r === 'ok') refreshForm();
-      }
-      if (o.kind === 'refresh') {
-        if (st.kind === 'pick' && !modelByCode(st.chosen)) {
-          st.chosen = null;
-          st.note = true;
-          st.errors = { model: { id: 'err.modelRequired' } };
-          st.summary = 'send.invalid';
-          renderAll();
-          focusFirstError();
-        } else {
+        st.errors = refusalErrors(o, values(), st.doc, r === 'ok');
+        if (!Object.keys(st.errors).length) {
           st.alert = { alert: 'send.server', retry: true };
-          renderAlert();
-          focusAlert();
+          return showAlert;
         }
-        return;
+        st.summary = 'send.invalid';
+        return showFieldErrors;
       }
       // A field the server refused (kind 'field').
       st.errors = {};
-      if (o.field === 'meas') {
-        st.measOpen = true;
-      } else {
-        st.errors[o.field] = o.field === 'date'
-          ? { id: o.error, vars: { date: ltr(formatDate(st.doc.min_desired_date)) } } : { id: o.error };
-      }
       st.summary = 'send.invalid';
-      renderErrors();
-      if (o.field === 'meas') { scrollToNode($('f-meas')); $('f-meas-toggle').focus({ preventScroll: true }); }
-      else focusFirstError();
+      if (o.field !== 'meas') {
+        st.errors[o.field] = { id: o.error };
+        return showFieldErrors;
+      }
+      st.measOpen = true;
+      return function () {
+        renderErrors();
+        scrollToNode($('f-meas'));
+        $('f-meas-toggle').focus({ preventScroll: true });
+      };
     }
 
     /** After a new document: keep what is still offered (model, branch), new date limit. */
     function refreshForm() {
-      if (st.chosen && !modelByCode(st.chosen)) st.chosen = null;
-      if (st.branchId && !st.doc.branches.some(function (b) { return b.id === st.branchId; })) st.branchId = null;
-      if (st.doc.models.length === 0 && st.kind === 'pick') st.kind = null;
+      const kept = afterRefresh(st, st.doc);
+      st.kind = kept.kind;
+      st.chosen = kept.chosen;
+      st.branchId = kept.branchId;
+      if (kept.lostModel) st.note = true;
       const date = $('f-date');
       if (st.doc.min_desired_date) date.setAttribute('min', st.doc.min_desired_date);
+      else date.removeAttribute('min');
       renderAll();
+    }
+
+    /** W9: a failing image (signed links expire after an hour) re-reads the document, at most once a
+     * minute, never while a request is being sent or after it was received. */
+    const imageRefresh = createThrottle(IMAGE_REFRESH_MS);
+    function onImageError() {
+      if (st.view !== 'shop' || st.sending || st.confirm || !imageRefresh(Date.now())) return;
+      fetchDoc(true).then(function (r) {
+        if (st.sending || st.confirm) return;
+        if (r === 'ok') refreshForm();
+        else if (r === 'na') showNa();
+      });
     }
 
     /** Recheck one field after a change, when it already shows an error (copy "Field errors"). */
@@ -1327,7 +1570,7 @@
         storeLang(lang);
         setLang(lang);
       });
-      $('o-load-retry').addEventListener('click', load);
+      $('o-load-retry').addEventListener('click', function () { load(true); });
       $('o-shop-order').addEventListener('click', function (e) {
         e.preventDefault();
         scrollToNode($('order'));
@@ -1433,9 +1676,11 @@
     westernDigits: westernDigits, trimText: trimText, charLength: charLength, normHandle: normHandle, normCode: normCode,
     parseParams: parseParams, cleanPath: cleanPath, normalizePhone: normalizePhone, instagramUrl: instagramUrl,
     parseMeasure: parseMeasure, formatAmount: formatAmount, formatDate: formatDate, shrinkSize: shrinkSize,
-    sniffImage: sniffImage, uuidv4: uuidv4, text: text, fillParts: fillParts, fillText: fillText,
-    whatsappText: whatsappText, whatsappLink: whatsappLink, safeUrl: safeUrl, sanitizeDoc: sanitizeDoc,
-    validate: validate, buildPayload: buildPayload, fingerprint: fingerprint, requestIdFor: requestIdFor,
-    outcome: outcome, start: start,
+    sniffImage: sniffImage, imageSize: imageSize, bitmapResize: bitmapResize, photoErrorId: photoErrorId,
+    createQueue: createQueue, createThrottle: createThrottle, createTokenBox: createTokenBox, fetchJson: fetchJson,
+    docResult: docResult, loadView: loadView, isFramed: isFramed, uuidv4: uuidv4, text: text, fillParts: fillParts,
+    fillText: fillText, whatsappText: whatsappText, whatsappLink: whatsappLink, safeUrl: safeUrl, sanitizeDoc: sanitizeDoc,
+    validate: validate, afterRefresh: afterRefresh, refusalErrors: refusalErrors, buildPayload: buildPayload,
+    fingerprint: fingerprint, requestIdFor: requestIdFor, outcome: outcome, start: start,
   };
 }));
