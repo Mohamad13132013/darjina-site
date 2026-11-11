@@ -475,21 +475,34 @@
     return fillParts(template, vars).map(function (p) { return p.text; }).join('');
   }
 
+  /** Which WhatsApp template (copy deck, WhatsApp group note, ADR-0038 section 8 follow-up): a model
+   * with 2 or more pieces → wa.modelPieces when the page showed a total (a model with a price), else
+   * wa.modelPiecesNoTotal; a model with 1 piece → wa.model; an Instagram link → wa.instagram (1 piece)
+   * or wa.instagramPieces (2 or more); the open-request refusal → wa.openLimit. */
+  function whatsappTemplate(info) {
+    if (info.kind === 'openLimit') return 'wa.openLimit';
+    const many = info.pieces > 1;
+    if (info.kind === 'insta') return many ? 'wa.instagramPieces' : 'wa.instagram';
+    if (!many) return 'wa.model';
+    return info.total ? 'wa.modelPieces' : 'wa.modelPiecesNoTotal';
+  }
+
+  /** The WhatsApp message data of the confirmation snapshot [c] (confirmSnapshot): what was sent. */
+  function confirmWhatsApp(c) {
+    return {
+      kind: c.kind === 'pick' ? 'model' : 'insta', code: c.code, name: c.name, url: c.url, customerName: c.customerName,
+      pieces: c.pieces, total: c.total,
+    };
+  }
+
   /** The WhatsApp message (copy wa.*) in [lang]: kind `model` {code, name, pieces, total}, `insta`
-   * {url, pieces} or `openLimit`; always with the customer's own name (she sends it herself). A model
-   * with a total (2 or more pieces) says the pieces and the total (wa.modelPieces, ADR-0038 section 1).
-   * W6: 2 or more pieces without a total (a model without a price, an Instagram link) still say the
-   * pieces; the deck has no message for that, so the confirmation's own line (confirm.summaryPieces,
-   * «Pieces: 2») follows the message (designer gap reported in TICKET-055). */
+   * {url, pieces} or `openLimit`; always with the customer's own name (she sends it herself); the
+   * template as whatsappTemplate picks it. */
   function whatsappText(strings, lang, info) {
-    const model = info.total ? 'wa.modelPieces' : 'wa.model';
-    const id = { model: model, insta: 'wa.instagram', openLimit: 'wa.openLimit' }[info.kind];
-    const pieces = info.pieces == null ? null : String(info.pieces);
-    const msg = fillText(text(strings, lang, id), {
-      code: info.code, name: info.name, url: info.url, customerName: info.customerName, pieces: pieces, total: info.total,
+    return fillText(text(strings, lang, whatsappTemplate(info)), {
+      code: info.code, name: info.name, url: info.url, customerName: info.customerName,
+      pieces: info.pieces == null ? null : String(info.pieces), total: info.total,
     });
-    const extra = info.kind !== 'openLimit' && !info.total && info.pieces > 1;
-    return extra ? msg + ' ' + fillText(text(strings, lang, 'confirm.summaryPieces'), { pieces: pieces }) : msg;
   }
 
   /** `https://wa.me/<digits>[?text=...]`, null without a usable phone. */
@@ -772,26 +785,29 @@
    * ([sent]: the confirmation snapshot, {code, pieces}), never the live form ([form]: {kind, chosen,
    * pieces} as the form shows it now): the model grid is outside the disabled fieldset, so the choice
    * may change while the request is under way. [doc], [available]: as stockRefusal. Answers {doc, kind,
-   * chosen, pieces, stock, alert}:
-   * - the refused model is still her choice: 'short' lowers the pieces sent to the count ({stock}:
-   *   send.stockShort); 'soldOut' clears the choice and shows the friendly note ({alert: {gone: true}});
-   * - she chose something else meanwhile: only the refused model is capped or removed; her choice stays,
-   *   its pieces clamped to its own cap, and the page says the request was not sent (send.server with
-   *   Retry: nothing about her current choice was refused);
-   * - 'retry' (the document allows the pieces again): send.server with Retry.
+   * chosen, pieces, stock, alert}; [stock] is the sand note above the send button ({id, count}):
+   * - the refused model is still her choice: 'short' lowers the pieces sent to the count
+   *   (send.stockShort); 'soldOut' clears the choice and shows the friendly note ({alert: {gone: true}});
+   *   'retry' (the document allows the pieces again): send.server with Retry;
+   * - she chose something else meanwhile (another model, an Instagram link; S-29b.23): only the refused
+   *   model is capped or removed; her choice stays, its pieces clamped to its own cap, and the note says
+   *   the model sent first was refused (send.stockChangedChoice), whatever the count;
+   * - no model was sent: send.server with Retry.
    */
   function stockOutcome(form, sent, doc, available) {
     const s = stockRefusal(doc, sent.code, sent.pieces, available);
     const out = { doc: s.doc, kind: form.kind, chosen: form.chosen, pieces: form.pieces, stock: null, alert: null };
-    const same = !!sent.code && form.kind === 'pick' && form.chosen === sent.code;
-    if (s.action === 'retry' || !same) {
+    const same = form.kind === 'pick' && form.chosen === sent.code;
+    if (!sent.code || (same && s.action === 'retry')) {
       out.alert = { alert: 'send.server', retry: true };
+    } else if (!same) {
+      out.stock = { id: 'send.stockChangedChoice', count: null };
     } else if (s.action === 'soldOut') {
       out.chosen = null;
       out.alert = { gone: true };
     } else {
       out.pieces = Math.min(sent.pieces, s.count);
-      out.stock = s.count;
+      out.stock = { id: 'send.stockShort', count: s.count };
     }
     if (!findModel(out.doc, out.chosen)) out.chosen = null;
     if (!out.doc.models.length) out.kind = 'insta';
@@ -1284,9 +1300,10 @@
       });
       const note = $('o-stock');
       note.hidden = st.stock === null;
-      renderOnce(note, st.stock === null ? '' : st.lang + '|' + st.stock, function () {
-        return st.stock === null ? [] : [el('div', { class: 'o-note o-note--sand', role: 'alert', tabindex: '-1' },
-          [icon('info'), el('p', {}, [frag('send.stockShort', { count: ltr(String(st.stock)) })])])];
+      const s = st.stock;
+      renderOnce(note, s === null ? '' : [st.lang, s.id, s.count].join('|'), function () {
+        return s === null ? [] : [el('div', { class: 'o-note o-note--sand', role: 'alert', tabindex: '-1' },
+          [icon('info'), el('p', {}, [frag(s.id, s.count === null ? {} : { count: ltr(String(s.count)) })])])];
       });
     }
     /** The line under the stepper (only N left / cap reached), hidden while the pieces show an error;
@@ -1401,10 +1418,7 @@
       setChildren($('o-sum-amount'), amount ? [amount] : []);
       $('o-sum-branch').hidden = !c.branchName;
       setChildren($('o-sum-branch'), c.branchName ? [frag('confirm.summaryBranch', { branch: c.branchName })] : []);
-      const link = whatsappLink(c.shopPhone, whatsappText(S, c.lang, {
-        kind: c.kind === 'pick' ? 'model' : 'insta', code: c.code, name: c.name, url: c.url, customerName: c.customerName,
-        pieces: c.pieces, total: c.total,
-      }));
+      const link = whatsappLink(c.shopPhone, whatsappText(S, c.lang, confirmWhatsApp(c)));
       $('o-confirm-wa').hidden = !link;
       if (link) $('o-confirm-wa-link').setAttribute('href', link);
     }
@@ -1645,11 +1659,12 @@
     }
 
     /**
-     * 409 stock_insufficient (ADR-0038 section 5, S-29b.20/21) for the request [sent] (its snapshot,
+     * 409 stock_insufficient (ADR-0038 section 5, S-29b.20/21/23) for the request [sent] (its snapshot,
      * W1). Without a count below the pieces sent the document is re-read first (W7). Pieces still left:
      * the stepper is lowered and capped to them, the total recomputes and send.stockShort shows above
      * the button; none left: the model leaves the grid, the choice is cleared and the friendly note tops
-     * the form; a model chosen meanwhile stays (stockOutcome). Every other value stays; nothing is resent
+     * the form; a choice made meanwhile stays and send.stockChangedChoice shows above the button
+     * (S-29b.23, stockOutcome). Every other value stays; nothing is resent
      * by itself and the next send has a new client_request_id (send() cleared st.last).
      */
     async function stockRefused(o, sent) {
@@ -1889,7 +1904,8 @@
     usableStock: usableStock, stockOutcome: stockOutcome, goneAlert: goneAlert, stepperState: stepperState, renderOnce: renderOnce,
     modelKind: modelKind, createThrottle: createThrottle, createTokenBox: createTokenBox, fetchJson: fetchJson,
     docResult: docResult, loadView: loadView, isFramed: isFramed, uuidv4: uuidv4, text: text, fillParts: fillParts,
-    fillText: fillText, whatsappText: whatsappText, whatsappLink: whatsappLink, safeUrl: safeUrl, sanitizeDoc: sanitizeDoc,
+    fillText: fillText, whatsappTemplate: whatsappTemplate, confirmWhatsApp: confirmWhatsApp, whatsappText: whatsappText,
+    whatsappLink: whatsappLink, safeUrl: safeUrl, sanitizeDoc: sanitizeDoc,
     validate: validate, afterRefresh: afterRefresh, refusalErrors: refusalErrors, buildPayload: buildPayload,
     fingerprint: fingerprint, requestIdFor: requestIdFor, outcome: outcome, confirmSnapshot: confirmSnapshot,
     rereadApplies: rereadApplies, start: start,

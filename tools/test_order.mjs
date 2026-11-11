@@ -12,7 +12,9 @@
 // "From"), and the strings and WhatsApp examples equal to the web copy deck of the main repository.
 // TICKET-055 (ADR-0038 sections 1, 4, 5): exact totals, the stock cap and «only N left», the 409
 // stock refusals, the request id after a refusal, the friendly note for a model that cannot be
-// ordered, the confirmation and WhatsApp totals, and answers of the batch 11 function.
+// ordered, the confirmation and WhatsApp totals, and answers of the batch 11 function. TICKET-055
+// follow-up (ADR-0038 section 8 follow-up): the WhatsApp template rule and deck examples 7-10, and
+// send.stockChangedChoice when the refused model is no longer the choice.
 // Run `python tools/build.py` first.
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -43,6 +45,8 @@ const REMOVED_IDS = ['form.modelPhotos', 'form.photosAdd', 'form.photosHelp', 'f
 const T55_IDS = ['gone.title', 'gone.body', 'gone.bodyNoModels', 'model.left1', 'model.left2', 'model.leftFew', 'form.piecesCap',
   'form.total', 'form.totalCalc', 'send.stockShort', 'send.soldOut', 'send.soldOutNoModels', 'confirm.summaryPieces', 'wa.modelPieces'];
 const T55_REMOVED = ['model.unavailable'];
+/** Ids added by the ADR-0038 section 8 follow-up (copy deck, same date; TICKET-055 follow-up). */
+const T55F_IDS = ['wa.modelPiecesNoTotal', 'wa.instagramPieces', 'send.stockChangedChoice'];
 
 // ------------------------------------------------------------------------------------------------
 // 404.html forwarding (ADR-0036 section 2)
@@ -663,7 +667,7 @@ test('TICKET-051: strings equal the web copy deck (ids, Arabic, English)', { ski
     assert.equal(STRINGS.en[id], r.en, `en ${id}`);
   }
   for (const id of ['model.price', 'form.instagramHelp', 'err.instagramRequired', 'shop.modelsIntro', 'shop.noModels',
-    'form.modelInstagram', 'err.modelRequired'].concat(T55_IDS)) {
+    'form.modelInstagram', 'err.modelRequired'].concat(T55_IDS, T55F_IDS)) {
     assert.ok(rows[id], `deck has ${id}`);
   }
   for (const id of REMOVED_IDS.concat(T55_REMOVED)) assert.equal(id in rows, false, `deck no longer has ${id}`);
@@ -693,9 +697,9 @@ test('WhatsApp messages equal the copy file examples', () => {
   assert.equal(O.whatsappLink('+97317001100', null), 'https://wa.me/97317001100');
 });
 
-test('TICKET-051/055: the six WhatsApp links equal the copy deck examples', { skip: NO_DECK }, () => {
+test('TICKET-051/055: the ten WhatsApp links equal the copy deck examples', { skip: NO_DECK }, () => {
   const links = [...DECK.matchAll(/^(https:\/\/wa\.me\/\S+)$/gm)].map((m) => m[1]);
-  assert.equal(links.length, 6);
+  assert.equal(links.length, 10);
   // Examples 5 and 6 (TICKET-055): m3 × 2, from the confirmation snapshot as the page builds it.
   const v = { ...base(), name: 'Hind', chosen: 'm3', pieces: '2' };
   const snap = (lang) => O.confirmSnapshot(v, O.buildPayload({ ...v, lang }, DOC), DOC);
@@ -706,10 +710,76 @@ test('TICKET-051/055: the six WhatsApp links equal the copy deck examples', { sk
     O.whatsappText(STRINGS, 'en', { kind: 'insta', url: 'https://www.instagram.com/p/C7def/', customerName: 'Dana' }),
     ...['ar', 'en'].map((lang) => {
       const c = snap(lang);
-      return O.whatsappText(STRINGS, c.lang, { kind: 'model', code: c.code, name: c.name, pieces: c.pieces, total: c.total, customerName: c.customerName });
+      return O.whatsappText(STRINGS, c.lang, O.confirmWhatsApp(c)); // as renderConfirm builds it
     }),
+    ...T55F_EXAMPLES.map(waOfExample),
   ].map((m) => O.whatsappLink('+97317001100', m));
   assert.deepEqual(made, links);
+});
+
+// The deck's WhatsApp examples 7 to 10 (ADR-0038 section 8 follow-up), built as the confirmation does
+// (confirmSnapshot of what was sent → confirmWhatsApp → whatsappText).
+const M2_PRICELESS = { code: 'm2', name: 'عباية كتان صيفية', from_price: null, from_price_currency: 'BHD', minor_units: 3, available_pieces: null, photo_urls: [] };
+const T55F_DOC = O.sanitizeDoc({
+  available: true, handle: 'alnoor.abayas', shop: { name: 'عبايات النور', phone: '+97317001100' }, phone_country_code: '+973',
+  branches: [{ id: '11111111-1111-4111-8111-111111111111', name: 'الرفاع' }], models: [M2_PRICELESS],
+}, 'https:');
+const T55F_EXAMPLES = [
+  { n: 7, lang: 'ar', name: 'Reem', kind: 'pick', chosen: 'm2', pieces: '2', tpl: 'wa.modelPiecesNoTotal' },
+  { n: 8, lang: 'en', name: 'Reem', kind: 'pick', chosen: 'm2', pieces: '2', tpl: 'wa.modelPiecesNoTotal' },
+  { n: 9, lang: 'ar', name: 'Salwa', kind: 'insta', insta: 'https://www.instagram.com/reel/C9xyz/', pieces: '3', tpl: 'wa.instagramPieces' },
+  { n: 10, lang: 'en', name: 'Dana', kind: 'insta', insta: 'https://www.instagram.com/p/C7def/', pieces: '2', tpl: 'wa.instagramPieces' },
+];
+const snapOfExample = (e) => {
+  const v = { ...base(), name: e.name, branchId: null, kind: e.kind, chosen: e.chosen || null, insta: e.insta || '', pieces: e.pieces, lang: e.lang };
+  return O.confirmSnapshot(v, O.buildPayload(v, T55F_DOC), T55F_DOC);
+};
+const waOfExample = (e) => {
+  const c = snapOfExample(e);
+  return O.whatsappText(STRINGS, c.lang, O.confirmWhatsApp(c));
+};
+
+test('TICKET-055 follow-up: WhatsApp examples 7-10 (texts and encoded lengths) equal the copy deck', { skip: NO_DECK }, () => {
+  for (const e of T55F_EXAMPLES) {
+    const block = new RegExp(`\\*\\*${e.n}\\. [^\\n]*\\*\\*\\n\\n\`\`\`text\\n(.*)\\n(https://wa\\.me/\\S+)\\n\\(encoded text: (\\d+) characters\\)`).exec(DECK);
+    assert.ok(block, `deck example ${e.n}`);
+    const msg = waOfExample(e);
+    assert.equal(msg, block[1], `example ${e.n} text`);
+    assert.equal(O.whatsappLink('+97317001100', msg), block[2], `example ${e.n} link`);
+    assert.equal(encodeURIComponent(msg).length, Number(block[3]), `example ${e.n} encoded length`);
+    assert.equal(O.whatsappTemplate(O.confirmWhatsApp(snapOfExample(e))), e.tpl, `example ${e.n} template`);
+  }
+});
+
+test('TICKET-055 follow-up: the WhatsApp template selection rule of the copy deck', () => {
+  const total = '51.000' + NBSP + 'BHD';
+  const cases = [
+    [{ kind: 'model', pieces: 2, total }, 'wa.modelPieces', 'priced model, 2 pieces'],
+    [{ kind: 'model', pieces: 99, total }, 'wa.modelPieces', 'priced model, 99 pieces'],
+    [{ kind: 'model', pieces: 2, total: null }, 'wa.modelPiecesNoTotal', 'priceless model, 2 pieces'],
+    [{ kind: 'model', pieces: 5 }, 'wa.modelPiecesNoTotal', 'priceless model, no total key'],
+    [{ kind: 'model', pieces: 1, total: null }, 'wa.model', 'model, 1 piece'],
+    [{ kind: 'model', pieces: 1, total }, 'wa.model', 'model, 1 piece, even with an amount'],
+    [{ kind: 'model' }, 'wa.model', 'model, pieces unknown'],
+    [{ kind: 'insta', pieces: 1 }, 'wa.instagram', 'Instagram, 1 piece'],
+    [{ kind: 'insta' }, 'wa.instagram', 'Instagram, pieces unknown'],
+    [{ kind: 'insta', pieces: 2 }, 'wa.instagramPieces', 'Instagram, 2 pieces'],
+    [{ kind: 'insta', pieces: 3, total }, 'wa.instagramPieces', 'Instagram, never a total'],
+    [{ kind: 'openLimit', pieces: 3, total }, 'wa.openLimit', 'open-request refusal'],
+  ];
+  for (const [info, id, why] of cases) assert.equal(O.whatsappTemplate(info), id, why);
+  // The text is the chosen template, filled, with nothing appended (the W6 stop-gap line is gone).
+  const url = 'https://www.instagram.com/p/C7def/';
+  for (const lang of ['ar', 'en']) {
+    for (const [info, id] of cases) {
+      const full = { code: 'm3', name: 'n', url, customerName: 'Hind', ...info };
+      const want = O.fillText(STRINGS[lang][id], { ...full, pieces: info.pieces == null ? null : String(info.pieces) });
+      assert.equal(O.whatsappText(STRINGS, lang, full), want, `${lang} ${id}`);
+      assert.doesNotMatch(want, /\{\w+\}/, `${lang} ${id}: every placeholder filled`);
+    }
+  }
+  assert.doesNotMatch(read('assets/js/order.js'), /summaryPieces'\), \{ pieces: pieces \}/, 'no pieces line appended');
+  assert.match(read('assets/js/order.js'), /whatsappLink\(c\.shopPhone, whatsappText\(S, c\.lang, confirmWhatsApp\(c\)\)\)/, 'the confirmation uses the rule');
 });
 
 test('every text id the page uses exists in Arabic and English', () => {
@@ -993,33 +1063,65 @@ test('TICKET-055 review fix W1: a stock refusal concerns the model sent, never a
     const v = { ...base(), branchId: null, chosen: code, pieces: String(pieces) };
     return O.confirmSnapshot(v, O.buildPayload(v, doc), doc);
   };
-  const SERVER = { alert: 'send.server', retry: true };
+  // Follow-up (copy send.stockChangedChoice, S-29b.23): a refusal of a model that is no longer the
+  // choice is the sand note above the send button, no alert, no Retry.
+  const CHANGED = { id: 'send.stockChangedChoice', count: null };
   // She sent m3 × 5 and tapped m1 in the grid (outside the disabled fieldset) before the answer: 3 left.
   const moved = O.stockOutcome({ kind: 'pick', chosen: 'm1', pieces: 5 }, sentOf('m3', 5), doc, 3);
   assert.equal(O.pieceCap(O.findModel(moved.doc, 'm3')), 3, 'the refused model is capped');
   assert.equal(O.findModel(moved.doc, 'm1').available_pieces, null, 'her new choice is untouched');
-  assert.deepEqual([moved.kind, moved.chosen, moved.pieces, moved.stock], ['pick', 'm1', 5, null]);
-  assert.deepEqual(moved.alert, SERVER, 'never «we set your pieces to 3» about m1');
+  assert.deepEqual([moved.kind, moved.chosen, moved.pieces], ['pick', 'm1', 5]);
+  assert.deepEqual([moved.stock, moved.alert], [CHANGED, null], 'never «we set your pieces to 3» about m1');
   // Still m3: the pieces SENT are lowered and the note shows.
   const kept = O.stockOutcome({ kind: 'pick', chosen: 'm3', pieces: 5 }, sentOf('m3', 5), doc, 3);
-  assert.deepEqual([kept.chosen, kept.pieces, kept.stock, kept.alert], ['m3', 3, 3, null]);
+  assert.deepEqual([kept.chosen, kept.pieces, kept.stock, kept.alert], ['m3', 3, { id: 'send.stockShort', count: 3 }, null]);
   // m1 × 4 refused (2 left) while she moved to m4 (1 left): m1 capped, m4 kept with its pieces re-clamped.
   const clamp = O.stockOutcome({ kind: 'pick', chosen: 'm4', pieces: 4 }, sentOf('m1', 4), doc, 2);
   assert.equal(O.pieceCap(O.findModel(clamp.doc, 'm1')), 2);
-  assert.deepEqual([clamp.chosen, clamp.pieces, clamp.alert], ['m4', 1, SERVER]);
+  assert.deepEqual([clamp.chosen, clamp.pieces, clamp.stock, clamp.alert], ['m4', 1, CHANGED, null]);
   // m4 sold out while she moved to m3: m4 leaves the grid, m3 stays chosen.
   const gone = O.stockOutcome({ kind: 'pick', chosen: 'm3', pieces: 1 }, sentOf('m4', 1), doc, 0);
   assert.deepEqual(gone.doc.models.map((m) => m.code), ['m3', 'm1']);
-  assert.deepEqual([gone.kind, gone.chosen, gone.pieces, gone.alert], ['pick', 'm3', 1, SERVER]);
-  // She switched to an Instagram link meanwhile: the link stays, nothing about it was refused.
+  assert.deepEqual([gone.kind, gone.chosen, gone.pieces, gone.stock, gone.alert], ['pick', 'm3', 1, CHANGED, null]);
+  // She switched to an Instagram link meanwhile: the link stays, the note says the model sent first.
   const link = O.stockOutcome({ kind: 'insta', chosen: 'm4', pieces: 1 }, sentOf('m4', 1), doc, 0);
-  assert.deepEqual([link.kind, link.chosen, link.alert], ['insta', null, SERVER]);
+  assert.deepEqual([link.kind, link.chosen, link.stock, link.alert], ['insta', null, CHANGED, null]);
+  // No usable count and the re-read document allows the pieces again: still the note (any hint).
+  const reread = O.stockOutcome({ kind: 'pick', chosen: 'm1', pieces: 2 }, sentOf('m3', 2), doc, null);
+  assert.equal(O.stockRefusal(doc, 'm3', 2, null).action, 'retry');
+  assert.deepEqual([reread.chosen, reread.pieces, reread.stock, reread.alert], ['m1', 2, CHANGED, null]);
+  // The same model and the document allows the pieces again, or no model sent: send.server with Retry.
+  const SERVER = { alert: 'send.server', retry: true };
+  const same = O.stockOutcome({ kind: 'pick', chosen: 'm3', pieces: 2 }, sentOf('m3', 2), doc, null);
+  assert.deepEqual([same.stock, same.alert], [null, SERVER]);
+  const none = O.stockOutcome({ kind: 'insta', chosen: null, pieces: 1 }, { code: null, pieces: 1 }, doc, 0);
+  assert.deepEqual([none.stock, none.alert], [null, SERVER]);
   // Same model, sold out: the friendly alert, choice cleared.
   const out = O.stockOutcome({ kind: 'pick', chosen: 'm4', pieces: 1 }, sentOf('m4', 1), doc, 0);
   assert.deepEqual([out.kind, out.chosen, out.alert], ['pick', null, { gone: true }]);
   const src = read('assets/js/order.js');
   assert.match(src, /if \(o\.kind === 'stock'\) return stockRefused\(o, sent\);/, 'the snapshot reaches the refusal');
   assert.match(fnBody(src, 'stockRefused'), /const s = stockOutcome\(form, sent, st\.doc, available\);/);
+});
+
+test('TICKET-055 follow-up: the stock note above the button shows the outcome\'s text (stockShort or stockChangedChoice)', () => {
+  const holders = { 'wa.modelPiecesNoTotal': ['{code}', '{name}', '{pieces}', '{customerName}'],
+    'wa.instagramPieces': ['{url}', '{pieces}', '{customerName}'], 'send.stockChangedChoice': [] };
+  for (const id of T55F_IDS) {
+    for (const lang of ['ar', 'en']) {
+      const s = STRINGS[lang][id];
+      assert.equal(typeof s, 'string', `${lang} ${id}`);
+      for (const h of holders[id]) assert.ok(s.includes(h), `${lang} ${id} has ${h}`);
+      assert.deepEqual((s.match(/\{\w+\}/g) || []).sort(), [...holders[id]].sort(), `${lang} ${id}: only its placeholders`);
+      if (id.startsWith('wa.')) assert.doesNotMatch(s, /\{total\}/, `${lang} ${id}: no total`);
+    }
+  }
+  const body = fnBody(read('assets/js/order.js'), 'renderPieces');
+  assert.match(body, /renderOnce\(note, s === null \? '' : \[st\.lang, s\.id, s\.count\]\.join\('\|'\), function \(\) \{/,
+    'rebuilt when the text changes (stockShort → stockChangedChoice)');
+  assert.match(body, /frag\(s\.id, s\.count === null \? \{\} : \{ count: ltr\(String\(s\.count\)\) \}\)/, 'the outcome\'s id, count only for stockShort');
+  assert.match(fnBody(read('assets/js/order.js'), 'stockRefused'),
+    /if \(s\.stock === null\) return focusAlert;\s+return function \(\) \{\s+const n = \$\('o-stock'\)\.firstChild;/, 'focus goes to the note');
 });
 
 test('TICKET-055 review fix W2: changing the pieces (stepper or typing) clears the stock note', () => {
@@ -1075,20 +1177,22 @@ test('TICKET-055 review fix W5: with the page-level note shown, a sold-out alert
   assert.match(read('assets/js/order.js'), /goneAlert\(st\.doc, st\.note\)/);
 });
 
-test('TICKET-055 review fix W6: the WhatsApp text says the pieces when more than 1, also without a total', () => {
+test('TICKET-055 review fix W6 (follow-up): the WhatsApp text says the pieces when more than 1, also without a total', () => {
   const priceless = O.sanitizeDoc(raw55([{ ...M1, from_price: null }]), 'https:');
   const v = { ...base(), name: 'Hind', branchId: null, chosen: 'm1', pieces: '3' };
   const c = O.confirmSnapshot(v, O.buildPayload(v, priceless), priceless);
   assert.deepEqual([c.pieces, c.total], [3, null]);
   const wa = (lang, info) => O.whatsappText(STRINGS, lang, { customerName: 'Hind', ...info });
-  const pieces = (lang, n) => O.fillText(STRINGS[lang]['confirm.summaryPieces'], { pieces: String(n) });
-  const model = { kind: 'model', code: 'm1', name: c.name, pieces: c.pieces, total: c.total };
+  // Follow-up: the deck's own templates (wa.modelPiecesNoTotal, wa.instagramPieces) replace the stop-gap
+  // «wa.model + confirm.summaryPieces» line.
   for (const lang of ['ar', 'en']) {
-    assert.equal(wa(lang, model), O.fillText(STRINGS[lang]['wa.model'], { code: 'm1', name: c.name, customerName: 'Hind' }) + ' ' + pieces(lang, 3));
+    assert.equal(wa(lang, O.confirmWhatsApp(c)),
+      O.fillText(STRINGS[lang]['wa.modelPiecesNoTotal'], { code: 'm1', name: c.name, pieces: '3', customerName: 'Hind' }));
   }
+  assert.equal(wa('en', O.confirmWhatsApp(c)), 'Hello, I sent a request from your Darjina page for the model m1 عباية كريب مطرزة, 3 pieces. Name: Hind.');
   const url = 'https://www.instagram.com/p/C7def/';
   assert.equal(wa('en', { kind: 'insta', url, pieces: 2, total: null }),
-    'Hello, I sent a request from your Darjina page for this post: https://www.instagram.com/p/C7def/ Name: Hind. Pieces: 2');
+    'Hello, I sent a request from your Darjina page for this post: https://www.instagram.com/p/C7def/ Pieces: 2. Name: Hind.');
   // 1 piece, a priced total and the open-limit message keep the deck texts unchanged.
   assert.equal(wa('en', { kind: 'insta', url, pieces: 1 }), O.fillText(STRINGS.en['wa.instagram'], { url, customerName: 'Hind' }));
   const total = '51.000' + NBSP + 'BHD';

@@ -131,6 +131,8 @@ How it works:
   - With 2 or more pieces of a priced model a total box follows the stepper (`form.total`, `form.totalCalc`),
     also on the confirmation (`confirm.summaryPieces` + price or total) and in the WhatsApp text
     (`wa.modelPieces`). Totals are computed on integer minor units (one half-up rounding), never floats.
+    WhatsApp template (deck group note): priced model 2+ `wa.modelPieces`, model without a price 2+
+    `wa.modelPiecesNoTotal`, model 1 `wa.model`, Instagram link 1 `wa.instagram`, 2+ `wa.instagramPieces`.
   - `available_pieces` of a model (0..99, null = unlimited, absent from a batch 11 function = unlimited)
     caps the stepper at min(99, available); 1 to 5 show «only N left» (`model.left*`), 6 to 98 say
     `form.piecesCap` once the cap is reached.
@@ -140,6 +142,9 @@ How it works:
     cleared and the friendly note tops the form (`gone.*`, `send.soldOut*`). Every other value stays. The
     next send gets a new `client_request_id` (the refused one stored nothing); a lost answer still
     resends the same id. A batch 11 function answers this case with its generic error (`send.server`).
+    When the refused model is no longer her choice (she picked another model or the Instagram link while
+    sending, S-29b.23), only the refused model is updated on the page, her choice and pieces (within its
+    cap) stay, and `send.stockChangedChoice` shows above the button instead.
   - A model link that cannot be ordered (`model_unavailable`: sold out, inactive, no price, unknown)
     shows one friendly note under the hero (`gone.title`, `gone.body`, or `gone.bodyNoModels` when the
     shop lists no model), then the shop's models and the form without a preselected model.
