@@ -97,7 +97,7 @@ GitHub Pages, S3 + CloudFront, nginx...). Notes:
 - `sitemap.xml` uses today's date as `lastmod`; rerun the generator after edits.
 - Local preview: `python -m http.server 8000` inside `website/`, then open http://localhost:8000/.
 
-## Public order page `/o/` (TICKET-047, ADR-0036)
+## Public order page `/o/` (TICKET-047, ADR-0036; TICKET-051, ADR-0037; TICKET-055, ADR-0038)
 
 One static page for every shop's online orders: `https://darjina.com/o/<instagram handle>[/<model code>]`
 and the ad-safe form `https://darjina.com/o/?h=<handle>[&m=<code>]` (HTTP 200; use it for paid ads).
@@ -125,6 +125,24 @@ How it works:
   ("السعر: 25.000 BHD" / "Price: 25.000 BHD"): `from_price` (the key keeps its name; it means the exact
   price) in `from_price_currency` with `minor_units`, the ISO code after the amount, both in one LTR
   isolate. A model without a price (null or 0, possible only before DB batch 11) shows no price line.
+- Stock and totals (TICKET-055, ADR-0038 sections 1, 4, 5; BR-120, BR-122, BR-125):
+  - The price is drawn prominently (label small, amount 19 px bold, 22 px on the chosen-model card and in
+    the sheet; roles `web.price.*` of design-tokens section 10).
+  - With 2 or more pieces of a priced model a total box follows the stepper (`form.total`, `form.totalCalc`),
+    also on the confirmation (`confirm.summaryPieces` + price or total) and in the WhatsApp text
+    (`wa.modelPieces`). Totals are computed on integer minor units (one half-up rounding), never floats.
+  - `available_pieces` of a model (0..99, null = unlimited, absent from a batch 11 function = unlimited)
+    caps the stepper at min(99, available); 1 to 5 show «only N left» (`model.left*`), 6 to 98 say
+    `form.piecesCap` once the cap is reached.
+  - `409 stock_insufficient` with `available` > 0: the pieces are lowered and capped there,
+    `send.stockShort` shows above the button, the customer sends again herself; with 0 (or the model
+    gone from a re-read when the answer has no `available`) the model leaves the grid, the choice is
+    cleared and the friendly note tops the form (`gone.*`, `send.soldOut*`). Every other value stays. The
+    next send gets a new `client_request_id` (the refused one stored nothing); a lost answer still
+    resends the same id. A batch 11 function answers this case with its generic error (`send.server`).
+  - A model link that cannot be ordered (`model_unavailable`: sold out, inactive, no price, unknown)
+    shows one friendly note under the hero (`gone.title`, `gone.body`, or `gone.bodyNoModels` when the
+    shop lists no model), then the shop's models and the form without a preselected model.
 - Owner-written texts are always written as text (`textContent`), never parsed as markup.
 - A new `client_request_id` whenever the form content changes; a resend of the unchanged form (lost
   answer, bot check failed, rate limit) reuses it, with a fresh Turnstile token each time. Switching the
@@ -149,17 +167,16 @@ Already done (nothing to do): the Turnstile widget exists (hostnames `darjina.co
 its public site key is in `o/config.js` (commit caa72a6) and its secret key is the Edge Function secret
 `TURNSTILE_SECRET_KEY`.
 
-Product owner, release order for this version (ADR-0037 sections 4 and 6 item 5; a push publishes
-darjina.com). Keep this order: the new `online-order` accepts at most 64 KiB per request, so an order
-page cached before the website push that still sends photos gets `413 payload_too_large` (shown as
-"could not be sent") once the function is redeployed.
-1. Main repository: run DB script 11 (`supabase/manual/11_ticket048_po_changes.sql`), then its probe
-   `supabase/scripts/post11-anon-check.ps1 -Mode post11`.
-2. This repository: `python tools/build.py`, `node tools/test_order.mjs`, then (only with the product
+Product owner, release order for this version (ADR-0038 section 6 as amended by section 8 item 2; a
+push publishes darjina.com). Keep this order: the new `online-order` works against batch 11, while the
+batch 11 function answers a stock refusal with a generic error, so the function goes first. This page
+works with both functions (no `available_pieces` = unlimited; the old error shows "could not be sent").
+1. Main repository: redeploy the Edge Function `online-order` with Verify JWT off and run its checks
+   (`supabase/functions/README.md`, "Redeploy for batch 12").
+2. Main repository: run DB script 12 (`supabase/manual/12_ticket052_model_stock.sql`), then its probe `supabase/scripts/post12-anon-check.ps1 -Mode post12`.
+3. This repository: `python tools/build.py`, `node tools/test_order.mjs`, then (only with the product
    owner's approval) `git push origin main` (the remote `origin` is the darjina-site repository).
-3. Redeploy the Edge Functions `daily-summary` and `online-order` with Verify JWT off and run their checks
-   (main repository `supabase/functions/README.md`, "Redeploy after batch 11").
 4. Merge `next` into `main` in the main repository.
-5. On a phone: open `https://darjina.com/o/<handle>` and `…/o/?h=<handle>&m=<code>` (a model link shows
-   its price), an Instagram-only shop (no listed models), and send one test request, then reject it in
-   the app.
+5. On a phone: open `https://darjina.com/o/<handle>` (prices, «only N left» on a model with 1 to 5
+   pieces), a model link with 2 pieces (total), a link to a sold-out or inactive model (friendly note
+   and the other models), and send one test request, then reject it in the app (its pieces come back).

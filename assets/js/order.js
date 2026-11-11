@@ -3,6 +3,11 @@
    TICKET-051 (ADR-0037 sections 1, 2, 5; BR-114 to BR-116): no customer photos (a catalogue model or an
    Instagram post link; a shop without listed models shows the link field alone) and the model's exact
    price ("Price: 25.000 BHD", never "From").
+   TICKET-055 (ADR-0038 sections 1, 4, 5; BR-120, BR-122, BR-125): the price drawn prominently, the
+   total for 2 or more pieces (exact minor-unit math; confirmation and WhatsApp text too), the pieces
+   stepper capped by the model's stock with «only N left» for 1 to 5, the 409 stock refusal (pieces
+   lowered, or the model sold out and removed) and one friendly note for a model link that cannot be
+   ordered. A batch 11 function (no available_pieces, a generic error for stock) keeps working.
 
    One static page for every shop: reads ?h=<handle>&m=<code> (404.html forwards the path links
    /o/<handle>[/<code>] here), restores the clean path, loads the shop's public document from the Edge
@@ -175,20 +180,127 @@
     return n > 0 && n < 300 ? n : NaN;
   }
 
-  /** `35.000 BHD`: the currency's minor units, a no-break space before the code. */
-  function formatAmount(value, minorUnits, code) {
-    const n = typeof value === 'number' ? value : Number(value);
-    if (value === null || value === '' || !isFinite(n)) return null;
+  /** A plain decimal as the server writes numeric values (`25.5`, `.5`, `25.`). */
+  const PLAIN_DECIMAL = /^\+?(?=\.?\d)(\d*)(?:\.(\d*))?$/;
+  /** The same with an exponent: what String(number) writes (`1e+21`, `1.5e-7`). */
+  const EXP_DECIMAL = /^\+?(\d*)(?:\.(\d*))?(?:e([+-]?\d+))?$/i;
+
+  /** A positive finite amount as {digits, scale} (the value is digits × 10^-scale), exactly as written
+   * when it is a plain decimal string, else from Number(value) (its shortest decimal form, so float noise
+   * like 0.30000000000000004, exponents and hex strings read as the old Number()-based page read them;
+   * W8). null for missing, non-finite and not above 0. */
+  function decimalParts(value) {
+    if (value === null || value === undefined || typeof value === 'symbol') return null;
+    const n = Number(value);
+    if (!isFinite(n) || n <= 0) return null;
+    const raw = typeof value === 'string' ? value.trim() : '';
+    const m = PLAIN_DECIMAL.exec(raw) || EXP_DECIMAL.exec(String(n));
+    let digits = (m[1] || '') + (m[2] || '');
+    let scale = (m[2] || '').length - Number(m[3] || 0);
+    if (scale < 0) {
+      digits += '0'.repeat(-scale);
+      scale = 0;
+    }
+    return { digits: digits.replace(/^0+(?=\d)/, ''), scale: scale };
+  }
+
+  /** A decimal digit string × a small integer, as a digit string (no precision limit). */
+  function mulDigits(digits, k) {
+    let out = '';
+    let carry = 0;
+    for (let i = digits.length - 1; i >= 0; i--) {
+      const x = (digits.charCodeAt(i) - 48) * k + carry;
+      out = (x % 10) + out;
+      carry = Math.floor(x / 10);
+    }
+    return (carry ? String(carry) : '') + out;
+  }
+
+  /** A decimal digit string + 1 (`1299` -> `1300`, `99` -> `100`). */
+  function addOne(digits) {
+    const a = digits.split('');
+    let i = a.length - 1;
+    while (i >= 0 && a[i] === '9') a[i--] = '0';
+    if (i < 0) a.unshift('1');
+    else a[i] = String(Number(a[i]) + 1);
+    return a.join('');
+  }
+
+  /**
+   * `35.000 BHD`: [value] × [times] (1 to 99, default 1) in the currency's minor units, a no-break space
+   * before the code. Exact decimal arithmetic on digit strings (TICKET-055, ADR-0038 section 1): the
+   * value is read as its decimal digits, multiplied, then rounded half up once to the minor units, so
+   * 2.675 SAR × 3 is 8.03 SAR (floating point gives 8.02). null for a missing, non-finite or not
+   * positive value (decimalParts).
+   */
+  function formatAmount(value, minorUnits, code, times) {
+    const k = times === undefined ? 1 : times;
+    const p = decimalParts(value);
+    if (!p || !Number.isInteger(k) || k < 1 || k > 99) return null;
     const d = Number.isInteger(minorUnits) && minorUnits >= 0 && minorUnits <= 4 ? minorUnits : 2;
-    const text = n.toFixed(d);
+    let units = mulDigits(p.digits, k);
+    if (p.scale > d) {
+      // Half up on the first dropped digit (the value is positive); a cut before the first digit drops
+      // only leading zeros.
+      const cut = units.length - (p.scale - d);
+      const up = cut >= 0 && units.charAt(cut) >= '5';
+      units = cut > 0 ? units.slice(0, cut) : '0';
+      if (up) units = addOne(units);
+    } else {
+      units += '0'.repeat(d - p.scale);
+    }
+    const digits = units.replace(/^0+(?=\d)/, '').padStart(d + 1, '0');
+    const text = d ? digits.slice(0, -d) + '.' + digits.slice(-d) : digits;
     return code ? text + NBSP + code : text;
+  }
+
+  /** The typed pieces (Arabic digits accepted) as a number, NaN when not 1 or 2 digits. */
+  function parsePieces(raw) {
+    const v = westernDigits(trimText(raw));
+    return /^\d{1,2}$/.test(v) ? Number(v) : NaN;
   }
 
   /** A model's exact price (ADR-0037 section 2): `from_price` (the name stays, its meaning is the price)
    * in `from_price_currency` with its `minor_units`, e.g. `25.000 BHD`; null for a model without a price
-   * (missing or not above 0, possible only before batch 11), which shows no price line. */
-  function modelPrice(m) {
-    return m && Number(m.from_price) > 0 ? formatAmount(m.from_price, m.minor_units, m.from_price_currency) : null;
+   * (missing or not above 0, possible only before batch 11), which shows no price line. With [pieces]:
+   * the order total, price × pieces (ADR-0038 section 1, BR-120; information only, BR-117). */
+  function modelPrice(m, pieces) {
+    return m && Number(m.from_price) > 0
+      ? formatAmount(m.from_price, m.minor_units, m.from_price_currency, pieces === undefined ? 1 : pieces) : null;
+  }
+
+  /** The most pieces the page offers for a model (ADR-0038 section 4, OQ-123): min(99, available)
+   * for a limited model, 99 for an unlimited one (available_pieces null, also every model of a batch
+   * 11 function), for an Instagram link and without a model. */
+  function pieceCap(m) {
+    return m && Number.isInteger(m.available_pieces) ? Math.max(0, Math.min(99, m.available_pieces)) : 99;
+  }
+
+  /** «Only N left» (model.left1 / left2 / leftFew) for 1 to 5 available pieces, else null: never for an
+   * unlimited model or above 5 (OQ-123). {id, vars}. */
+  function stockLeft(m) {
+    const n = m && Number.isInteger(m.available_pieces) ? m.available_pieces : null;
+    if (n === null || n < 1 || n > 5) return null;
+    if (n === 1) return { id: 'model.left1' };
+    if (n === 2) return { id: 'model.left2' };
+    return { id: 'model.leftFew', vars: { count: { text: String(n), ltr: true } } };
+  }
+
+  /** The line under the pieces stepper for the chosen model and [pieces]: «only N left» from the start
+   * for 1 to 5 available, `form.piecesCap` once the cap is reached for 6 to 98 available, else null. */
+  function piecesHelp(m, pieces) {
+    const left = stockLeft(m);
+    if (left) return left;
+    const cap = pieceCap(m);
+    return cap < 99 && pieces >= cap ? { id: 'form.piecesCap', vars: { count: { text: String(cap), ltr: true } } } : null;
+  }
+
+  /** The total line (form.total + form.totalCalc) for a priced model and 2 to cap pieces, else null:
+   * one piece needs none (the price is the amount), nor an Instagram link or no model. */
+  function orderTotal(m, pieces) {
+    if (!Number.isInteger(pieces) || pieces < 2 || pieces > pieceCap(m)) return null;
+    const total = modelPrice(m, pieces);
+    return total ? { total: total, amount: modelPrice(m), pieces: pieces } : null;
   }
 
   /** `YYYY-MM-DD` -> `dd/MM/yyyy` (no Date object, so no time zone); '' for anything else. */
@@ -363,13 +475,21 @@
     return fillParts(template, vars).map(function (p) { return p.text; }).join('');
   }
 
-  /** The WhatsApp message (copy wa.*) in [lang]: kind `model` {code, name}, `insta` {url} or
-   * `openLimit`; always with the customer's own name (she sends it herself). */
+  /** The WhatsApp message (copy wa.*) in [lang]: kind `model` {code, name, pieces, total}, `insta`
+   * {url, pieces} or `openLimit`; always with the customer's own name (she sends it herself). A model
+   * with a total (2 or more pieces) says the pieces and the total (wa.modelPieces, ADR-0038 section 1).
+   * W6: 2 or more pieces without a total (a model without a price, an Instagram link) still say the
+   * pieces; the deck has no message for that, so the confirmation's own line (confirm.summaryPieces,
+   * «Pieces: 2») follows the message (designer gap reported in TICKET-055). */
   function whatsappText(strings, lang, info) {
-    const id = { model: 'wa.model', insta: 'wa.instagram', openLimit: 'wa.openLimit' }[info.kind];
-    return fillText(text(strings, lang, id), {
-      code: info.code, name: info.name, url: info.url, customerName: info.customerName,
+    const model = info.total ? 'wa.modelPieces' : 'wa.model';
+    const id = { model: model, insta: 'wa.instagram', openLimit: 'wa.openLimit' }[info.kind];
+    const pieces = info.pieces == null ? null : String(info.pieces);
+    const msg = fillText(text(strings, lang, id), {
+      code: info.code, name: info.name, url: info.url, customerName: info.customerName, pieces: pieces, total: info.total,
     });
+    const extra = info.kind !== 'openLimit' && !info.total && info.pieces > 1;
+    return extra ? msg + ' ' + fillText(text(strings, lang, 'confirm.summaryPieces'), { pieces: pieces }) : msg;
   }
 
   /** `https://wa.me/<digits>[?text=...]`, null without a usable phone. */
@@ -411,13 +531,17 @@
         from_price: typeof m.from_price === 'number' || typeof m.from_price === 'string' ? m.from_price : null,
         from_price_currency: str(m.from_price_currency),
         minor_units: Number.isInteger(m.minor_units) ? m.minor_units : null,
+        // ADR-0038 section 4: an integer 0..99 (99 = 99 or more) for a limited model; null (unlimited)
+        // for anything else, also when the key is absent (batch 11 function).
+        available_pieces: Number.isInteger(m.available_pieces) && m.available_pieces >= 0 ? Math.min(99, m.available_pieces) : null,
         instagram_url: ig && INSTAGRAM.test(ig) ? ig : null,
         photo_urls: arr(m.photo_urls).map(function (u) { return safeUrl(u, pageProtocol); }).filter(Boolean),
       };
     };
     const minDate = str(b.min_desired_date);
     const cc = str(b.phone_country_code);
-    const models = arr(b.models).map(model).filter(function (m) { return m.code !== ''; });
+    // A sold-out model is never offered (the server lists none; BR-122).
+    const models = arr(b.models).map(model).filter(function (m) { return m.code !== '' && m.available_pieces !== 0; });
     const asked = b.model && typeof b.model === 'object' ? normCode(str(b.model.code) || '') : '';
     return {
       handle: normHandle(str(b.handle) || ''),
@@ -431,9 +555,14 @@
       branches: arr(b.branches).filter(function (x) { return x && typeof x.id === 'string' && UUID.test(x.id); })
         .map(function (x) { return { id: x.id, name: str(x.name) || '', location: str(x.location) }; }),
       models: models,
-      model: models.some(function (m) { return m.code === asked; }) ? asked : null,
-      model_unavailable: b.model_unavailable === true,
+      model: asked && findModel({ models: models }, asked) ? asked : null,
+      model_unavailable: b.model_unavailable === true || (asked !== '' && !findModel({ models: models }, asked)),
     };
+  }
+
+  /** The listed model with [code] in [doc], null when it is not listed (or no code). */
+  function findModel(doc, code) {
+    return code ? ((doc && doc.models) || []).find(function (m) { return m.code === code; }) || null : null;
   }
 
   /** How the form names the model (ADR-0037 section 1): 'pick' (a catalogue model), 'insta' (an
@@ -442,6 +571,11 @@
   function modelKind(v, doc) {
     if (!(doc.models || []).length) return 'insta';
     return v.kind === 'pick' || v.kind === 'insta' ? v.kind : null;
+  }
+
+  /** The catalogue model the form names ([v]: {kind, chosen}), null for a link or nothing chosen. */
+  function chosenModel(v, doc) {
+    return modelKind(v, doc) === 'pick' ? findModel(doc, v.chosen) : null;
   }
 
   /**
@@ -459,7 +593,7 @@
     const models = doc.models || [];
     const kind = modelKind(v, doc);
     if (kind === 'pick') {
-      if (!models.some(function (m) { return m.code === v.chosen; })) e.model = { id: 'err.modelRequired' };
+      if (!findModel(doc, v.chosen)) e.model = { id: 'err.modelRequired' };
     } else if (kind === 'insta') {
       const url = instagramUrl(v.insta);
       if (url === null) e.insta = { id: 'err.instagramInvalid' };
@@ -480,8 +614,11 @@
         else if (n !== null && isNaN(n)) e['meas.' + k] = { id: 'err.measRange' };
       });
     }
-    const pieces = westernDigits(trimText(v.pieces));
-    if (!/^\d{1,2}$/.test(pieces) || Number(pieces) < 1) e.pieces = { id: 'err.pieces' };
+    const pieces = parsePieces(v.pieces);
+    const cap = pieceCap(chosenModel(v, doc));
+    if (!(pieces >= 1)) e.pieces = { id: 'err.pieces' };
+    // ADR-0038 section 4: never more pieces than the chosen model has left (the stepper stops there).
+    else if (pieces > cap) e.pieces = { id: 'form.piecesCap', vars: { count: { text: String(cap), ltr: true } } };
     if (charLength(trimText(v.notes)) > 500) e.notes = { id: 'err.notesLong' };
     if (v.date && (!DATE.test(v.date) || (doc.min_desired_date && v.date < doc.min_desired_date))) e.date = dateEarly(doc);
     return e;
@@ -495,7 +632,7 @@
    * chosen, branchId}. lostModel: the chosen model is gone (the page shows the unavailable note). */
   function afterRefresh(form, doc) {
     const models = doc.models || [];
-    const kept = !!form.chosen && models.some(function (m) { return m.code === form.chosen; });
+    const kept = !!findModel(doc, form.chosen);
     return {
       kind: models.length === 0 ? 'insta' : form.kind,
       chosen: kept ? form.chosen : null,
@@ -537,7 +674,7 @@
       });
       p.measurements = m;
     }
-    p.no_pieces = Number(westernDigits(trimText(v.pieces)));
+    p.no_pieces = parsePieces(v.pieces);
     const notes = trimText(v.notes);
     if (notes !== '') p.notes = notes;
     if (v.date) p.desired_date = v.date;
@@ -559,14 +696,17 @@
    * model's code and name, the branch name, the Instagram link, the customer's name, the language and
    * the shop's phone for the WhatsApp button. */
   function confirmSnapshot(v, payload, doc) {
-    const models = (doc && doc.models) || [];
     const branches = (doc && doc.branches) || [];
     const code = payload.model_code || null;
-    const m = code ? models.find(function (x) { return x.code === code; }) || null : null;
+    const m = findModel(doc, code);
     const branch = branches.find(function (b) { return b.id === payload.branch_id; })
       || (branches.length === 1 ? branches[0] : null);
+    const pieces = payload.no_pieces;
     return {
       kind: modelKind(v, doc || {}), code: code, name: m ? m.name : null, url: payload.instagram_url || null,
+      // TICKET-055 (S-29c.4): the pieces, and the amount the page showed: the price for one piece, the
+      // total for more (null for a link or a model without a price).
+      pieces: pieces, price: pieces === 1 ? modelPrice(m) : null, total: pieces > 1 ? modelPrice(m, pieces) : null,
       branchName: branch ? branch.name : null, customerName: payload.customer_name, lang: payload.language,
       shopPhone: doc && doc.shop ? doc.shop.phone : null,
     };
@@ -583,6 +723,119 @@
     return last && last.fp === fp ? last.id : newId();
   }
 
+  /** Whether the next send of the unchanged form may reuse this send's id after outcome [o]: yes for
+   * every answer that may hide a stored request or that the same request may pass later (lost answer,
+   * bot check, rate limit, server error), no after a stock refusal: nothing was stored, so the next send
+   * is a new request (ADR-0038 section 5), never a replay of nothing. */
+  function keepsRequestId(o) {
+    return o.kind !== 'stock';
+  }
+
+  /** W7: the refusal's count, used only when it is below the [pieces] sent; null (no count, or a count
+   * that would allow the pieces sent) means the page re-reads the document and decides from it, so it
+   * never says «we set your pieces to N» when N is not lower. */
+  function usableStock(available, pieces) {
+    return Number.isInteger(available) && available < pieces ? available : null;
+  }
+
+  /**
+   * What a stock refusal does to the refused model (ADR-0038 section 5; copy send.stockShort /
+   * send.soldOut). [doc]: the page's document, re-read when the answer had no usable count; [code]: the
+   * model sent; [pieces]: the pieces sent. The count is the answer's when below the pieces sent
+   * (usableStock), else the document's (a model missing from it is sold out). Answers {doc, action}:
+   * 'short' {count} (the model capped there, the pieces lowered to it), 'soldOut' {noModels} (the model
+   * removed from the grid) or 'retry' (the document allows the pieces again, or no model was sent).
+   * [doc] itself is never changed.
+   */
+  function stockRefusal(doc, code, pieces, available) {
+    const models = doc.models || [];
+    const m = findModel(doc, code);
+    const usable = usableStock(available, pieces);
+    if (!code || (usable === null && m && (m.available_pieces === null || m.available_pieces >= pieces))) {
+      return { doc: doc, action: 'retry' };
+    }
+    const count = usable !== null ? usable : (m ? m.available_pieces : 0);
+    if (count === 0) {
+      const rest = models.filter(function (x) { return x.code !== code; });
+      return { doc: Object.assign({}, doc, { models: rest }), action: 'soldOut', noModels: rest.length === 0 };
+    }
+    return {
+      doc: Object.assign({}, doc, {
+        models: models.map(function (x) { return x.code === code ? Object.assign({}, x, { available_pieces: count }) : x; }),
+      }),
+      action: 'short', count: count,
+    };
+  }
+
+  /**
+   * The form after a stock refusal (S-29b.20/21; W1): the refusal concerns the model that was SENT
+   * ([sent]: the confirmation snapshot, {code, pieces}), never the live form ([form]: {kind, chosen,
+   * pieces} as the form shows it now): the model grid is outside the disabled fieldset, so the choice
+   * may change while the request is under way. [doc], [available]: as stockRefusal. Answers {doc, kind,
+   * chosen, pieces, stock, alert}:
+   * - the refused model is still her choice: 'short' lowers the pieces sent to the count ({stock}:
+   *   send.stockShort); 'soldOut' clears the choice and shows the friendly note ({alert: {gone: true}});
+   * - she chose something else meanwhile: only the refused model is capped or removed; her choice stays,
+   *   its pieces clamped to its own cap, and the page says the request was not sent (send.server with
+   *   Retry: nothing about her current choice was refused);
+   * - 'retry' (the document allows the pieces again): send.server with Retry.
+   */
+  function stockOutcome(form, sent, doc, available) {
+    const s = stockRefusal(doc, sent.code, sent.pieces, available);
+    const out = { doc: s.doc, kind: form.kind, chosen: form.chosen, pieces: form.pieces, stock: null, alert: null };
+    const same = !!sent.code && form.kind === 'pick' && form.chosen === sent.code;
+    if (s.action === 'retry' || !same) {
+      out.alert = { alert: 'send.server', retry: true };
+    } else if (s.action === 'soldOut') {
+      out.chosen = null;
+      out.alert = { gone: true };
+    } else {
+      out.pieces = Math.min(sent.pieces, s.count);
+      out.stock = s.count;
+    }
+    if (!findModel(out.doc, out.chosen)) out.chosen = null;
+    if (!out.doc.models.length) out.kind = 'insta';
+    const cap = pieceCap(chosenModel(out, out.doc));
+    if (Number.isInteger(out.pieces) && out.pieces > cap) out.pieces = cap;
+    return out;
+  }
+
+  /** The friendly note's body (BR-125): pointing to the models below, or to the Instagram link when the
+   * shop lists none; [sent]: the soldOut line after a refused send (copy send.soldOut*). */
+  function goneTexts(doc) {
+    const none = !(doc.models || []).length;
+    return { body: none ? 'gone.bodyNoModels' : 'gone.body', sent: none ? 'send.soldOutNoModels' : 'send.soldOut' };
+  }
+
+  /** The sold-out alert above the form after a refused send (S-29b.21), as [{tag, id}]: the friendly
+   * title, body and the soldOut line; W5: when the page-level note (a gone link) already shows the
+   * title and body, only the soldOut line, so the friendly block never shows twice. */
+  function goneAlert(doc, noteShown) {
+    const g = goneTexts(doc);
+    const sent = { tag: 'p', id: g.sent };
+    return noteShown ? [sent] : [{ tag: 'h3', id: 'gone.title' }, { tag: 'p', id: g.body }, sent];
+  }
+
+  /** W4: the stepper buttons for the typed [n] (NaN when empty or not digits) and the [cap]: − only
+   * above 1; + until the cap, also from an empty field (stepPieces starts from 1). */
+  function stepperState(n, cap) {
+    return { less: !(n > 1), more: n >= cap };
+  }
+
+  /** W3/W9: [node]'s children rebuilt from [build]() only when [sig] differs from the last one written
+   * there, so a live region (role=alert, aria-live) is announced once per change, not on every render.
+   * Answers whether it rebuilt. */
+  function renderOnce(node, sig, build) {
+    if (node.oSig === sig) return false;
+    node.oSig = sig;
+    replaceChildren(node, build());
+    return true;
+  }
+  function replaceChildren(node, children) {
+    while (node.firstChild) node.removeChild(node.firstChild);
+    children.forEach(function (c) { if (c) node.appendChild(c); });
+  }
+
   /** What the page does with the function's answer (README `online-order`, copy "Refusals"). */
   function outcome(status, body) {
     const code = body && typeof body.error === 'string' ? body.error : null;
@@ -593,6 +846,13 @@
       return { kind: 'alert', alert: 'send.server', retry: true };
     }
     if (status === 404 && code === 'page_not_available') return { kind: 'na' };
+    // ADR-0038 section 5: another order took pieces meanwhile; available 0..99 (0 = sold out), null when
+    // the function sent no usable count (the page re-reads the document). A batch 11 function answers
+    // this case with its generic 500 (send.server below).
+    if (status === 409 && code === 'stock_insufficient') {
+      const n = body.available;
+      return { kind: 'stock', available: Number.isInteger(n) && n >= 0 ? Math.min(99, n) : null };
+    }
     if (status === 403 && code === 'bot_check_failed') return { kind: 'alert', alert: 'send.botFailed', retry: true };
     if (status === 429 && code === 'limit_phone_open') return { kind: 'alert', alert: 'send.openLimit', tone: 'sand', wa: true };
     if (status === 429 && (code === 'limit_network' || code === 'limit_shop')) {
@@ -638,7 +898,7 @@
       lang: 'ar', h: '', m: '', doc: null, view: 'loading',
       kind: null, chosen: null, note: false,
       branchId: null, measOpen: false, measMode: 'SHOP', activePoint: null,
-      errors: {}, summary: null, alert: null, sending: false, sends: 0, last: null, confirm: null, sheet: null,
+      errors: {}, summary: null, alert: null, stock: null, sending: false, sends: 0, last: null, confirm: null, sheet: null,
     };
     let sheetOpener = null;
 
@@ -662,22 +922,21 @@
       return e;
     }
     function icon(name) { return $('ic-' + name).content.cloneNode(true); }
-    /** A text by id with its placeholders as <bdi> (dir=ltr for numbers, codes, dates, links). */
-    function frag(id, vars) {
+    /** A text by id with its placeholders as <bdi> (dir=ltr for numbers, codes, dates, links);
+     * [varClass]: a class for those <bdi> (the prominent amount, design-tokens section 10). */
+    function frag(id, vars, varClass) {
       const f = doc.createDocumentFragment();
       fillParts(t(id), vars).forEach(function (p) {
         if (!p.isVar) { f.appendChild(doc.createTextNode(p.text)); return; }
         const b = doc.createElement('bdi');
         if (p.ltr) b.setAttribute('dir', 'ltr');
+        if (varClass) b.className = varClass;
         b.textContent = p.text;
         f.appendChild(b);
       });
       return f;
     }
-    function setChildren(node, children) {
-      while (node.firstChild) node.removeChild(node.firstChild);
-      children.forEach(function (c) { if (c) node.appendChild(c); });
-    }
+    const setChildren = replaceChildren;
     const ltr = function (value) { return { text: value, ltr: true }; };
 
     // ---- language ----
@@ -780,6 +1039,7 @@
       renderAll();
       bot.init();
       if (st.chosen) scrollToNode($('order'));
+      else if (st.note) $('o-gone-title').focus({ preventScroll: true }); // BR-125: the friendly note first
     }
 
     // ---- form state ----
@@ -790,7 +1050,7 @@
         chosen: fromLink ? d.model : null,
         note: fromLink && d.model_unavailable,
         branchId: null, measOpen: false, measMode: 'SHOP', activePoint: null,
-        errors: {}, summary: null, alert: null, sending: false, last: null, confirm: null,
+        errors: {}, summary: null, alert: null, stock: null, sending: false, last: null, confirm: null,
       });
       $('o-form').reset();
       $('f-pieces').value = '1';
@@ -817,7 +1077,7 @@
       };
     }
     function modelByCode(code) {
-      return st.doc.models.find(function (m) { return m.code === code; }) || null;
+      return findModel(st.doc, code);
     }
 
     // ---- rendering ----
@@ -830,12 +1090,12 @@
       renderKind();
       renderPick();
       renderBranchField();
-      renderPieces();
       renderCounter();
       renderDateHelp();
       renderErrors();
       renderAlert();
       renderSubmit();
+      renderPieces(); // W3: here and in the pieces / model handlers only, never from renderErrors or renderSubmit
       renderConfirm();
       renderSheet();
       syncChecked();
@@ -862,7 +1122,11 @@
       if (shop.phone) $('o-shop-call').setAttribute('href', 'tel:' + shop.phone);
       const inForm = !st.confirm;
       ['o-branches', 'o-models', 'order'].forEach(function (id) { $(id).hidden = !inForm; });
+      // BR-125: one friendly note for a model link that cannot be ordered, then the models (if any).
       $('o-model-note').hidden = !(inForm && st.note);
+      $('o-gone-body').textContent = t(goneTexts(st.doc).body);
+      // S-29a.7: with no model left the note already points to the link field; no empty models section.
+      if (st.note && !st.doc.models.length) $('o-models').hidden = true;
       $('o-confirm').hidden = inForm;
       $('o-shop-order').hidden = !inForm;
     }
@@ -874,10 +1138,16 @@
       }));
     }
 
-    /** "Price: 25.000 BHD" (model.price), the amount and its code in one LTR isolate; none without a price. */
+    /** "Price: 25.000 BHD" (model.price), the amount and its code in one LTR isolate; none without a price.
+     * Prominent (ADR-0038, web.price.*): the label small and muted, the amount large and bold. */
     function priceLine(m) {
       const amount = modelPrice(m);
-      return amount ? el('span', { class: 'o-pr' }, [frag('model.price', { amount: ltr(amount) })]) : null;
+      return amount ? el('span', { class: 'o-pr' }, [frag('model.price', { amount: ltr(amount) }, 'o-amt')]) : null;
+    }
+    /** A web.stock.left pill for a text {id, vars} (stockLeft: «only N left»; piecesHelp): [chip] on the
+     * card photo, a line elsewhere; null without one. */
+    function leftSpan(spec, chip) {
+      return spec ? el('span', { class: chip ? 'o-left o-left--chip' : 'o-left' }, [frag(spec.id, spec.vars)]) : null;
     }
     /** mode: 'button' (opens the details sheet), 'plain' (gallery) or 'thumb' (chosen-model row, no counter). */
     function photoNode(m, index, mode) {
@@ -902,7 +1172,7 @@
       }
       const nameBtn = el('button', { type: 'button', class: 'o-nm', text: m.name });
       nameBtn.addEventListener('click', function () { openSheet({ type: 'details', code: m.code }, nameBtn); });
-      return el('article', { class: 'o-mc' + (on ? ' is-on' : '') }, [ph, el('div', { class: 'o-mc-t' }, [
+      return el('article', { class: 'o-mc' + (on ? ' is-on' : '') }, [ph, leftSpan(stockLeft(m), true), el('div', { class: 'o-mc-t' }, [
         el('bdi', { class: 'o-code', dir: 'ltr', text: m.code }),
         nameBtn,
         priceLine(m),
@@ -935,7 +1205,8 @@
       if (m) {
         setChildren($('f-pick-panel'), [el('div', { class: 'o-pick' }, [
           photoNode(m, 0, 'thumb'),
-          el('span', { class: 'o-pick-tx' }, [el('bdi', { class: 'o-code', dir: 'ltr', text: m.code }), el('b', { text: m.name }), priceLine(m)]),
+          el('span', { class: 'o-pick-tx' }, [el('bdi', { class: 'o-code', dir: 'ltr', text: m.code }), el('b', { text: m.name }),
+            priceLine(m), leftSpan(stockLeft(m), false)]),
           el('button', { type: 'button', class: 'o-txt', text: t('common.change'), onclick: function () { scrollToNode($('o-models')); } }),
         ])]);
       } else {
@@ -987,10 +1258,56 @@
       });
     }
 
+    /** The typed pieces as a number (NaN when not digits). */
+    function piecesValue() {
+      return parsePieces($('f-pieces').value);
+    }
+    /** The stepper capped by the chosen model's stock (the buttons sit in the fieldset that is disabled
+     * while sending), the line under it, the total for 2 or more pieces (ADR-0038 sections 1 and 4) and
+     * the stock refusal note. W3/W9: the live total box and the role=alert note are rebuilt only when
+     * their text changes, so a screen reader hears each change once. */
     function renderPieces() {
-      const n = Number(westernDigits($('f-pieces').value));
-      $('f-pieces-less').disabled = st.sending || !(n > 1);
-      $('f-pieces-more').disabled = st.sending || !(n < 99);
+      const n = piecesValue();
+      const m = chosenModel(st, st.doc);
+      const steps = stepperState(n, pieceCap(m));
+      $('f-pieces-less').disabled = steps.less;
+      $('f-pieces-more').disabled = steps.more;
+      renderPiecesHelp();
+      const total = orderTotal(m, n);
+      const box = $('f-total');
+      box.hidden = !total;
+      renderOnce(box, total ? [st.lang, total.total, total.amount, total.pieces].join('|') : '', function () {
+        return total ? [
+          el('p', { class: 'o-total-tx' }, [frag('form.total', { total: ltr(total.total) }, 'o-amt')]),
+          el('p', { class: 'o-total-calc' }, [el('bdi', { dir: 'ltr' }, [frag('form.totalCalc', { amount: total.amount, pieces: String(total.pieces) })])]),
+        ] : [];
+      });
+      const note = $('o-stock');
+      note.hidden = st.stock === null;
+      renderOnce(note, st.stock === null ? '' : st.lang + '|' + st.stock, function () {
+        return st.stock === null ? [] : [el('div', { class: 'o-note o-note--sand', role: 'alert', tabindex: '-1' },
+          [icon('info'), el('p', {}, [frag('send.stockShort', { count: ltr(String(st.stock)) })])])];
+      });
+    }
+    /** The line under the stepper (only N left / cap reached), hidden while the pieces show an error;
+     * from renderErrors too, as the date help (not a live region). */
+    function renderPiecesHelp() {
+      const m = chosenModel(st, st.doc);
+      const help = m ? piecesHelp(m, piecesValue()) : null;
+      const helpNode = $('f-pieces-help');
+      helpNode.hidden = !help || !!st.errors.pieces;
+      setChildren(helpNode, [leftSpan(help, false)]);
+    }
+    /** W2: the pieces changed (stepper or typing): the stock refusal note no longer describes them. */
+    function piecesEdited() {
+      st.stock = null;
+      renderPieces();
+    }
+    /** The pieces lowered to the chosen model's cap (a model with fewer pieces left was chosen, or a
+     * larger number was typed). */
+    function clampPieces() {
+      const cap = pieceCap(chosenModel(st, st.doc));
+      if (piecesValue() > cap) $('f-pieces').value = String(cap);
     }
     function renderCounter() {
       setChildren($('f-notes-count'), [el('bdi', { dir: 'ltr' }, [frag('form.counter', {
@@ -1031,7 +1348,7 @@
       const summary = $('o-summary');
       summary.hidden = !st.summary;
       $('o-summary-text').textContent = st.summary ? t(st.summary) : '';
-      if (st.doc) renderMeas();
+      if (st.doc) { renderMeas(); renderPiecesHelp(); }
     }
 
     function renderAlert() {
@@ -1039,6 +1356,13 @@
       const a = st.alert;
       box.hidden = !a;
       if (!a) { setChildren(box, []); return; }
+      if (a.gone) {
+        // S-29b.21: the chosen model sold out meanwhile: the friendly note at the top of the form (W5:
+        // only its soldOut line while the page-level note already shows the title and body).
+        setChildren(box, [el('div', { class: 'o-note o-note--sand o-gone', role: 'alert', tabindex: '-1' }, [icon('info'),
+          el('div', { class: 'o-note-body' }, goneAlert(st.doc, st.note).map(function (x) { return el(x.tag, { text: t(x.id) }); }))])]);
+        return;
+      }
       const acts = [];
       if (a.retry) acts.push(el('button', { type: 'button', class: 'btn btn--ghost o-btn-s', text: t('common.retry'), onclick: retry }));
       if (a.wa) {
@@ -1059,7 +1383,6 @@
       b.disabled = st.sending;
       $('o-submit-text').textContent = t(st.sending ? 'form.sending' : 'form.submit');
       $('o-fields').disabled = st.sending;
-      renderPieces();
     }
     function setSending(on) {
       st.sending = on;
@@ -1071,10 +1394,16 @@
       if (!c) return;
       const model = c.kind === 'pick' ? [ltr(c.code), c.name] : t('form.modelInstagram');
       setChildren($('o-sum-model'), [frag('confirm.summaryModel', { model: model })]);
+      // S-29c.4: the pieces, then the price (1 piece) or the total (2 or more) the page showed.
+      setChildren($('o-sum-pieces'), [frag('confirm.summaryPieces', { pieces: ltr(String(c.pieces)) })]);
+      const amount = c.total ? frag('form.total', { total: ltr(c.total) }) : c.price ? frag('model.price', { amount: ltr(c.price) }) : null;
+      $('o-sum-amount').hidden = !amount;
+      setChildren($('o-sum-amount'), amount ? [amount] : []);
       $('o-sum-branch').hidden = !c.branchName;
       setChildren($('o-sum-branch'), c.branchName ? [frag('confirm.summaryBranch', { branch: c.branchName })] : []);
       const link = whatsappLink(c.shopPhone, whatsappText(S, c.lang, {
         kind: c.kind === 'pick' ? 'model' : 'insta', code: c.code, name: c.name, url: c.url, customerName: c.customerName,
+        pieces: c.pieces, total: c.total,
       }));
       $('o-confirm-wa').hidden = !link;
       if (link) $('o-confirm-wa-link').setAttribute('href', link);
@@ -1094,10 +1423,15 @@
     }
 
     // ---- model choice ----
+    /** After the model choice changed: the pieces fit the new model's stock, the stock note is gone. */
     function renderModelChoice() {
+      clampPieces();
+      st.stock = null;
+      recheck('pieces');
       renderModels();
       renderKind();
       renderPick();
+      renderPieces();
       syncChecked();
     }
     function choose(code) {
@@ -1226,6 +1560,7 @@
     async function attempt() {
       const v = values();
       st.alert = null;
+      st.stock = null;
       st.errors = validate(v, st.doc);
       st.summary = Object.keys(st.errors).length ? 'form.errorSummary' : null;
       renderErrors();
@@ -1258,7 +1593,9 @@
         return showAlert;
       }
       bot.reset();
-      return handle(outcome(res.status, res.body), sent);
+      const o = outcome(res.status, res.body);
+      if (!keepsRequestId(o)) st.last = null;
+      return handle(o, sent);
     }
 
     /** The answer's effect on the state; answers what to show. [sent]: the confirmation snapshot of
@@ -1274,6 +1611,7 @@
         };
       }
       if (o.kind === 'na') return showNa;
+      if (o.kind === 'stock') return stockRefused(o, sent);
       if (o.kind === 'alert') {
         st.alert = o;
         return showAlert;
@@ -1306,13 +1644,45 @@
       };
     }
 
-    /** After a new document: keep what is still offered (model, branch), new date limit. */
-    function refreshForm() {
+    /**
+     * 409 stock_insufficient (ADR-0038 section 5, S-29b.20/21) for the request [sent] (its snapshot,
+     * W1). Without a count below the pieces sent the document is re-read first (W7). Pieces still left:
+     * the stepper is lowered and capped to them, the total recomputes and send.stockShort shows above
+     * the button; none left: the model leaves the grid, the choice is cleared and the friendly note tops
+     * the form; a model chosen meanwhile stays (stockOutcome). Every other value stays; nothing is resent
+     * by itself and the next send has a new client_request_id (send() cleared st.last).
+     */
+    async function stockRefused(o, sent) {
+      const form = { kind: st.kind, chosen: st.chosen, pieces: piecesValue() };
+      const available = usableStock(o.available, sent.pieces);
+      if (available === null) {
+        const r = await fetchDoc(true);
+        if (r === 'na') return showNa;
+        if (r !== 'ok') {
+          st.alert = { alert: 'send.server', retry: true };
+          return showAlert;
+        }
+        refreshForm(false);
+      }
+      const s = stockOutcome(form, sent, st.doc, available);
+      Object.assign(st, { doc: s.doc, kind: s.kind, chosen: s.chosen, stock: s.stock, alert: s.alert });
+      if (Number.isInteger(s.pieces)) $('f-pieces').value = String(s.pieces);
+      renderAll();
+      if (s.stock === null) return focusAlert;
+      return function () {
+        const n = $('o-stock').firstChild;
+        if (n) { scrollToNode($('f-pieces').closest('.o-f')); n.focus({ preventScroll: true }); }
+      };
+    }
+
+    /** After a new document: keep what is still offered (model, branch), new date limit. [markLost]
+     * (default true): a chosen model that is gone shows the friendly note at the top of the page. */
+    function refreshForm(markLost) {
       const kept = afterRefresh(st, st.doc);
       st.kind = kept.kind;
       st.chosen = kept.chosen;
       st.branchId = kept.branchId;
-      if (kept.lostModel) st.note = true;
+      if (kept.lostModel && markLost !== false) st.note = true;
       const date = $('f-date');
       if (st.doc.min_desired_date) date.setAttribute('min', st.doc.min_desired_date);
       else date.removeAttribute('min');
@@ -1362,8 +1732,9 @@
       const on = st.kind === 'pick' && st.chosen === m.code;
       setChildren(body, [
         gallery,
-        m.description ? el('p', { class: 'o-desc', text: m.description }) : null,
         priceLine(m),
+        leftSpan(stockLeft(m), false),
+        m.description ? el('p', { class: 'o-desc', text: m.description }) : null,
         el('p', { class: 'o-small' }, [frag('model.code', { code: ltr(m.code) })]),
         on ? el('span', { class: 'o-chosen' }, [icon('check'), el('span', { text: t('model.chosen') })])
           : el('button', { type: 'button', class: 'btn o-block', text: t('model.choose'), onclick: function () { choose(m.code); } }),
@@ -1419,7 +1790,7 @@
       doc.querySelectorAll('input[name="mkind"]').forEach(function (r) {
         r.addEventListener('change', function () {
           st.kind = r.value;
-          renderModelChoice();
+          renderModelChoice(); // the cap and the total follow the kind (a link has neither)
           recheck('model');
           if (st.errors.insta && st.kind !== 'insta') { delete st.errors.insta; renderErrors(); }
         });
@@ -1454,12 +1825,13 @@
       });
       $('f-pieces-less').addEventListener('click', function () { stepPieces(-1); });
       $('f-pieces-more').addEventListener('click', function () { stepPieces(1); });
-      $('f-pieces').addEventListener('input', renderPieces);
+      $('f-pieces').addEventListener('input', piecesEdited);
       $('f-pieces').addEventListener('change', function () {
-        const n = westernDigits($('f-pieces').value.trim());
-        if (/^\d{1,2}$/.test(n) && Number(n) >= 1) $('f-pieces').value = String(Number(n));
+        const n = piecesValue();
+        if (n >= 1) $('f-pieces').value = String(n);
+        clampPieces();
         recheck('pieces');
-        renderPieces();
+        piecesEdited();
       });
       $('f-notes').addEventListener('input', renderCounter);
       [['f-name', 'name'], ['f-phone', 'phone'], ['f-cc', 'phone'], ['f-insta', 'insta'], ['f-notes', 'notes'], ['f-date', 'date']]
@@ -1488,11 +1860,12 @@
       win.addEventListener('popstate', function () { if (st.sheet) closeSheet(true); });
     }
     function stepPieces(delta) {
-      const cur = Number(westernDigits($('f-pieces').value.trim()));
-      const n = Math.min(99, Math.max(1, (Number.isFinite(cur) && cur >= 1 ? cur : 1) + delta));
+      const cur = piecesValue();
+      const cap = Math.max(1, pieceCap(chosenModel(st, st.doc)));
+      const n = Math.min(cap, Math.max(1, (cur >= 1 ? cur : 1) + delta));
       $('f-pieces').value = String(n);
       recheck('pieces');
-      renderPieces();
+      piecesEdited();
     }
 
     // ---- start ----
@@ -1511,6 +1884,9 @@
     westernDigits: westernDigits, trimText: trimText, charLength: charLength, normHandle: normHandle, normCode: normCode,
     parseParams: parseParams, cleanPath: cleanPath, normalizePhone: normalizePhone, instagramUrl: instagramUrl,
     parseMeasure: parseMeasure, formatAmount: formatAmount, modelPrice: modelPrice, formatDate: formatDate,
+    pieceCap: pieceCap, stockLeft: stockLeft, piecesHelp: piecesHelp, orderTotal: orderTotal, chosenModel: chosenModel,
+    keepsRequestId: keepsRequestId, stockRefusal: stockRefusal, goneTexts: goneTexts, findModel: findModel,
+    usableStock: usableStock, stockOutcome: stockOutcome, goneAlert: goneAlert, stepperState: stepperState, renderOnce: renderOnce,
     modelKind: modelKind, createThrottle: createThrottle, createTokenBox: createTokenBox, fetchJson: fetchJson,
     docResult: docResult, loadView: loadView, isFramed: isFramed, uuidv4: uuidv4, text: text, fillParts: fillParts,
     fillText: fillText, whatsappText: whatsappText, whatsappLink: whatsappLink, safeUrl: safeUrl, sanitizeDoc: sanitizeDoc,

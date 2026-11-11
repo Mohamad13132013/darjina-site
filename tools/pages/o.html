@@ -45,7 +45,7 @@
     </section>
 
     <div class="o-sec o-sec--note" id="o-model-note" hidden>
-      <div class="o-note o-note--sand" role="status">{{icon:info}}<p data-s="model.unavailable"></p></div>
+      <div class="o-note o-note--sand o-gone" role="status">{{icon:info}}<div class="o-note-body"><h2 id="o-gone-title" tabindex="-1" data-s="gone.title"></h2><p id="o-gone-body"></p></div></div>
     </div>
 
     <section class="o-sec" id="o-branches" aria-labelledby="o-branches-title">
@@ -127,10 +127,12 @@
             <label class="o-lab" for="f-pieces" data-s="form.pieces"></label>
             <div class="o-step">
               <button type="button" id="f-pieces-less" data-s-attr="aria-label=form.piecesLess">{{icon:minus}}</button>
-              <input id="f-pieces" type="text" inputmode="numeric" dir="ltr" maxlength="2" value="1" aria-describedby="f-pieces-err">
+              <input id="f-pieces" type="text" inputmode="numeric" dir="ltr" maxlength="2" value="1" aria-describedby="f-pieces-help f-pieces-err">
               <button type="button" id="f-pieces-more" data-s-attr="aria-label=form.piecesMore">{{icon:plus}}</button>
             </div>
+            <p class="o-hl" id="f-pieces-help" hidden></p>
             <p class="o-er" id="f-pieces-err" hidden></p>
+            <div class="o-total" id="f-total" aria-live="polite" hidden></div>
           </div>
 
           <div class="o-f" data-field="notes">
@@ -158,6 +160,7 @@
 
         <p class="o-small o-noid">{{icon:lock}}<span data-s="form.noId"></span></p>
         <div id="o-turnstile" class="o-turnstile"></div>
+        <div id="o-stock" hidden></div>
         <button type="submit" class="btn o-submit" id="o-submit"><span class="o-spin" aria-hidden="true"></span><span id="o-submit-text" data-s="form.submit"></span></button>
         <p class="o-small o-bot" data-s="form.botNote"></p>
       </form>
@@ -167,7 +170,7 @@
       <span class="o-ring">{{icon:check}}</span>
       <div role="status"><h2 id="o-confirm-title" tabindex="-1" data-s="confirm.title"></h2></div>
       <p data-s="confirm.body"></p>
-      <div class="o-sum"><p id="o-sum-model"></p><p id="o-sum-branch"></p></div>
+      <div class="o-sum"><p id="o-sum-model"></p><p id="o-sum-pieces"></p><p id="o-sum-amount" hidden></p><p id="o-sum-branch"></p></div>
       <div class="o-ok-wa" id="o-confirm-wa" hidden>
         <a class="btn o-block" id="o-confirm-wa-link" target="_blank" rel="noopener noreferrer">{{icon:chat}}<span data-s="confirm.whatsapp"></span></a>
         <p class="o-hl" data-s="confirm.whatsappHelp"></p>

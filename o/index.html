@@ -78,7 +78,7 @@
     </section>
 
     <div class="o-sec o-sec--note" id="o-model-note" hidden>
-      <div class="o-note o-note--sand" role="status"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.6v.1"/></svg><p data-s="model.unavailable">هذا الموديل لم يعد متاحاً. يمكنك اختيار موديل آخر أو إرسال رابط من إنستغرام.</p></div>
+      <div class="o-note o-note--sand o-gone" role="status"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.6v.1"/></svg><div class="o-note-body"><h2 id="o-gone-title" tabindex="-1" data-s="gone.title">نفد هذا الموديل بسرعة كبيرة!</h2><p id="o-gone-body"></p></div></div>
     </div>
 
     <section class="o-sec" id="o-branches" aria-labelledby="o-branches-title">
@@ -224,10 +224,12 @@
             <label class="o-lab" for="f-pieces" data-s="form.pieces">عدد القطع</label>
             <div class="o-step">
               <button type="button" id="f-pieces-less" aria-label="قطعة أقل" data-s-attr="aria-label=form.piecesLess"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 12h14"/></svg></button>
-              <input id="f-pieces" type="text" inputmode="numeric" dir="ltr" maxlength="2" value="1" aria-describedby="f-pieces-err">
+              <input id="f-pieces" type="text" inputmode="numeric" dir="ltr" maxlength="2" value="1" aria-describedby="f-pieces-help f-pieces-err">
               <button type="button" id="f-pieces-more" aria-label="قطعة أكثر" data-s-attr="aria-label=form.piecesMore"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14"/></svg></button>
             </div>
+            <p class="o-hl" id="f-pieces-help" hidden></p>
             <p class="o-er" id="f-pieces-err" hidden></p>
+            <div class="o-total" id="f-total" aria-live="polite" hidden></div>
           </div>
 
           <div class="o-f" data-field="notes">
@@ -255,6 +257,7 @@
 
         <p class="o-small o-noid"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="4.5" y="10.5" width="15" height="10.5" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg><span data-s="form.noId">لا نطلب رقم الهوية ولا تاريخ الميلاد ولا بيانات الدفع.</span></p>
         <div id="o-turnstile" class="o-turnstile"></div>
+        <div id="o-stock" hidden></div>
         <button type="submit" class="btn o-submit" id="o-submit"><span class="o-spin" aria-hidden="true"></span><span id="o-submit-text" data-s="form.submit">إرسال الطلب</span></button>
         <p class="o-small o-bot" data-s="form.botNote">يحمي Cloudflare Turnstile هذه الصفحة من الرسائل الآلية.</p>
       </form>
@@ -264,7 +267,7 @@
       <span class="o-ring"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
       <div role="status"><h2 id="o-confirm-title" tabindex="-1" data-s="confirm.title">وصل طلبك</h2></div>
       <p data-s="confirm.body">سيتواصل معك المحل قريباً لتأكيد التفاصيل والسعر.</p>
-      <div class="o-sum"><p id="o-sum-model"></p><p id="o-sum-branch"></p></div>
+      <div class="o-sum"><p id="o-sum-model"></p><p id="o-sum-pieces"></p><p id="o-sum-amount" hidden></p><p id="o-sum-branch"></p></div>
       <div class="o-ok-wa" id="o-confirm-wa" hidden>
         <a class="btn o-block" id="o-confirm-wa-link" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M20.5 11.5a8.5 8.5 0 0 1-12.6 7.4L3.5 20.5l1.6-4.3A8.5 8.5 0 1 1 20.5 11.5z"/><path d="M8.5 11.5h.01M12 11.5h.01M15.5 11.5h.01" stroke-width="2.6"/></svg><span data-s="confirm.whatsapp">مراسلة المحل على واتساب</span></a>
         <p class="o-hl" data-s="confirm.whatsappHelp">يفتح واتساب برسالة جاهزة عن طلبك.</p>

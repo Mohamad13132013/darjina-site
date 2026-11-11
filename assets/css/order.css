@@ -145,7 +145,32 @@ html[lang="en"] .o-page { line-height: 1.6; }
   font-weight: 600; font-size: .95rem; line-height: 1.45; overflow-wrap: anywhere; text-align: start;
   background: none; border: 0; padding: 0; color: inherit; cursor: pointer; font-family: inherit;
 }
-.o-pr { font-size: .85rem; color: var(--muted); }
+/* Price roles (design-tokens section 10, ADR-0038): web.price.label = .o-pr text, web.price.amount =
+   .o-amt (22 px on the chosen-model card and in the sheet), web.total = .o-total, web.stock.left = .o-left. */
+.o-pr { font-size: 13px; font-weight: 400; color: var(--muted); line-height: 1.35; }
+.o-amt {
+  font-size: 19px; line-height: 1.35; font-weight: 700; color: var(--teal-900);
+  white-space: nowrap; font-variant-numeric: tabular-nums;
+}
+.o-pick .o-amt, .o-sheet .o-amt { font-size: 22px; }
+.o-mc { position: relative; }
+.o-left {
+  justify-self: start; display: inline-block; border-radius: 999px; padding: 1px 10px;
+  background: var(--sand-soft); color: var(--sand-ink); border: 1px solid #e8d6b4;
+  font-size: 13px; font-weight: 600; line-height: 1.6;
+}
+.o-left--chip {
+  position: absolute; inset-block-start: 8px; inset-inline-start: 8px;
+  background: var(--sand); color: var(--ink); border: 0; font-size: 12px; padding: 0 8px;
+}
+.o-total {
+  background: var(--mint-2); border: 1px solid var(--line); border-radius: var(--radius-s);
+  padding: 10px 12px; display: grid; gap: 2px;
+}
+.o-total-tx { font-size: 15px; font-weight: 600; color: var(--teal-900); }
+.o-total-calc { font-size: 13px; color: var(--muted); }
+.o-gone h2, .o-gone h3 { font-size: 20px; line-height: 1.4; color: #4d3812; }
+.o-gone h2:focus { outline: none; }
 .o-mc .btn { min-height: 40px; font-size: .85rem; padding: .4em .8em; margin-block-start: 6px; }
 .o-chosen { display: inline-flex; gap: 4px; align-items: center; font-size: .85rem; font-weight: 600; color: var(--teal-700); min-height: 40px; margin-block-start: 6px; }
 .o-lnk { font-size: .82rem; color: var(--teal-700); display: inline-flex; gap: 4px; align-items: center; min-height: 32px; }
@@ -200,7 +225,7 @@ html[lang="en"] .o-page { line-height: 1.6; }
 .o-pick .o-ph--ig span { display: none; }
 .o-pick-tx { flex: 1; display: grid; min-width: 0; overflow-wrap: anywhere; }
 .o-pick-tx b { font-weight: 600; line-height: 1.45; }
-.o-pick-tx span:not(.o-code) { font-size: .85rem; color: var(--muted); }
+.o-pick-tx .o-left { margin-block-start: 4px; }
 
 .o-spin {
   width: 22px; height: 22px; border-radius: 999px; border: 3px solid currentColor; border-inline-end-color: transparent;
