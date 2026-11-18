@@ -1,0 +1,83 @@
+<!--meta
+title: Delete your account | Darjina
+description: How to delete a Darjina account in the app or by email, and what is deleted and what stays of the shop's data.
+-->
+<!-- Texts: content/en/delete-account.md (docs/design/copy-account-deletion-page.md, TICKET-064, ADR-0040 section 5). -->
+<section class="page-hero" id="intro" aria-labelledby="page-title">
+  <div class="wrap">
+    <h1 id="page-title">Delete your account</h1>
+    <p class="updated" style="color:var(--on-dark-muted)">Last updated: 18 November 2026</p>
+    <p class="lead">Everyone who uses the Darjina app can delete their own account inside the app, or ask for the deletion by email if the app is not available. This page explains both ways, and what is deleted and what stays.</p>
+  </div>
+</section>
+
+<div class="section" style="padding-block-start:40px">
+  <div class="wrap">
+    <article class="prose">
+      <section id="in-app" aria-labelledby="inapp-title">
+        <h2 id="inapp-title">Delete in the app</h2>
+        <h3>Shop owner</h3>
+        <p>Go to “Settings” → “My account” → “Delete my account”.</p>
+        <h3>Staff member</h3>
+        <p>Open the app menu → “Delete my account”, below “Change password”.</p>
+        <h3>New shop owner, not yet approved</h3>
+        <p>On the “Your account is being reviewed” or “Your account request was not accepted” screen: the “Delete my account” button.</p>
+        <p>The app first shows exactly what will be deleted. Then it asks you to tick “I understand this cannot be undone.” and to enter the account's password, and to confirm once more. After the deletion the app returns to the sign-in screen and the account can no longer be used to sign in.</p>
+        <p class="note">{{icon:info}}<span>If the email was confirmed but the shop details were not sent yet, the app shows no delete button; ask for the deletion by email as explained below. The same applies to an account that was deactivated and can no longer sign in.</span></p>
+      </section>
+
+      <section id="what-happens" aria-labelledby="effects-title">
+        <h2 id="effects-title">A shop owner's account or a staff account</h2>
+        <p>The app works out what the deletion does from the account's situation at that moment, and shows it before you confirm.</p>
+        <h3>If the account is the shop's last active owner</h3>
+        <ul>
+          <li>The shop and all its branches are closed.</li>
+          <li>Every staff sign-in of the shop is deleted and the staff lose access at once.</li>
+          <li>The online order page stops, the shop's Instagram handle becomes free for others, and the shop's notifications stop.</li>
+          <li>This also applies to a new shop that was not approved yet or was refused.</li>
+        </ul>
+        <h3>If the account is a staff member's, or an owner's while another active owner exists</h3>
+        <ul>
+          <li>Only this account is deleted; the shop goes on working with the rest of its team.</li>
+          <li>The shop's records show “Deleted account” instead of the account holder's name.</li>
+          <li>Receipts and payments recorded with this account stay in the shop's records.</li>
+        </ul>
+        <p><strong>Deletion is final: it cannot be undone and the account or the shop cannot be restored. The same email address can be used for a new account afterwards.</strong></p>
+      </section>
+
+      <section id="deleted" aria-labelledby="deleted-title">
+        <h2 id="deleted-title">What is deleted</h2>
+        <ul>
+          <li>Sign-ins (email and password), so they can no longer be used.</li>
+          <li>The details of the deleted account holders in the shop: name, phone number, email, ID number, birthday and gender; “Deleted account” takes the place of the name.</li>
+          <li>The phones' registrations for notifications.</li>
+          <li>When the shop is closed: the shop's phone number and its Instagram handle for the order page.</li>
+        </ul>
+      </section>
+
+      <section id="kept" aria-labelledby="kept-title">
+        <h2 id="kept-title">What stays</h2>
+        <p>The shop's business records are kept: receipts, payments and their history, customers and their measurements, models and their photos, online requests, and the shop's name, commercial registration, logo and branches. They are kept deactivated and seen by nobody, neither in the app nor on the website, with no fixed end date.</p>
+        <p>We do not erase these records on request. <!-- OQ-162 --></p>
+        <p>Customers have no Darjina accounts. For a question about a customer's data, contact the shop that recorded it, or write to us and we pass the request on.</p>
+      </section>
+
+      <section id="by-email" aria-labelledby="email-title">
+        <h2 id="email-title">Ask for the deletion without the app</h2>
+        <p>You can ask for your account to be deleted by writing to <a href="{{mail}}?subject=Darjina%20account%20deletion%20request">info@darjina.com</a>:</p>
+        <ul>
+          <li>from the account's own email address;</li>
+          <li>or, if that is not possible, with the shop's name and phone number so we can check the request.</li>
+        </ul>
+        <p>We check that the request comes from the account holder, then delete the account the same way the app does and answer your email within 30 days.</p>
+        <div class="btn-row">
+          <a class="btn" href="{{mail}}?subject=Darjina%20account%20deletion%20request">{{icon:mail}}Email us</a>
+        </div>
+      </section>
+
+      <section id="more">
+        <p style="margin-block-start:2em"><a href="{{link:privacy}}">Back to the privacy policy</a></p>
+      </section>
+    </article>
+  </div>
+</div>

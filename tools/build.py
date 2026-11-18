@@ -28,9 +28,11 @@ TOOLS = ROOT / "tools"
 DOMAIN = "https://darjina.com"
 # UI text shown inside the phone mockups ({{t:key}})
 MOCK = json.loads((TOOLS / "mock_strings.json").read_text(encoding="utf-8"))
-PAGES = ["home", "features", "how-it-works", "about", "contact", "privacy", "404"]
+PAGES = ["home", "features", "how-it-works", "about", "contact", "privacy", "delete-account", "404"]
 NAV = ["home", "features", "how-it-works", "about", "contact"]
-FOOTER_LINKS = ["home", "features", "how-it-works", "about", "contact", "privacy"]
+# (slug, label key in S); the deletion page (TICKET-064, ADR-0040 section 5) follows the privacy link
+FOOTER_LINKS = [(n, "nav." + n) for n in ("home", "features", "how-it-works", "about", "contact", "privacy")]
+FOOTER_LINKS.append(("delete-account", "footer.delete_account"))
 
 WA = "https://wa.me/97334047233"
 MAIL = "mailto:info@darjina.com"
@@ -55,6 +57,7 @@ S = {
         "footer.copyright": "© 2026 دارجينا. جميع الحقوق محفوظة.",
         "footer.made_in": "صُنع في البحرين لمحلات العبايات في الخليج.",
         "footer.aria": "روابط التذييل",
+        "footer.delete_account": "حذف الحساب",
         "logo_alt": "دارجينا Darjina",
         "og_alt": "شعار دارجينا: رسم لامرأة بعباءة بألوان الأخضر البحري، وعبارة The app for abaya tailor shops",
         "description": "تطبيق عربي لمحلات العبايات: فاتورة خلال ثوانٍ، قياسات على صورة العباية، دفعات وعربون، متابعة الطلبات ولوحة للمالك. اطلب عرضاً تجريبياً.",
@@ -77,6 +80,7 @@ S = {
         "footer.copyright": "© 2026 Darjina. All rights reserved.",
         "footer.made_in": "Made in Bahrain for abaya shops across the GCC.",
         "footer.aria": "Footer links",
+        "footer.delete_account": "Delete your account",
         "logo_alt": "Darjina",
         "og_alt": "Darjina logo: a woman in a flowing sea-green abaya, with the line The app for abaya tailor shops",
         "description": "An Arabic-first app for abaya shops: receipts in seconds, measurements on an abaya picture, deposits and payments, order tracking and an owner dashboard.",
@@ -322,7 +326,7 @@ def header(lang, slug):
 
 def footer(lang):
     s = S[lang]
-    links = "".join(f'<li><a href="{href(lang, n)}">{s["nav." + n]}</a></li>' for n in FOOTER_LINKS)
+    links = "".join(f'<li><a href="{href(lang, n)}">{s[key]}</a></li>' for n, key in FOOTER_LINKS)
     return f"""<footer class="site-footer on-dark">
   <div class="wrap">
     <div class="footer-grid">
@@ -534,7 +538,7 @@ def build():
                 f'\n    <xhtml:link rel="alternate" hreflang="{l}" href="{DOMAIN + href(l, slug)}"/>'
                 for l in ("ar", "en"))
             alts += f'\n    <xhtml:link rel="alternate" hreflang="x-default" href="{DOMAIN + href("ar", slug)}"/>'
-            pr = "1.0" if slug == "home" else ("0.3" if slug == "privacy" else "0.8")
+            pr = "1.0" if slug == "home" else ("0.3" if slug in ("privacy", "delete-account") else "0.8")
             urls.append(f"  <url>\n    <loc>{DOMAIN + href(lang, slug)}</loc>\n    <lastmod>{today}</lastmod>"
                         f"\n    <priority>{pr}</priority>{alts}\n  </url>")
     (ROOT / "sitemap.xml").write_text(

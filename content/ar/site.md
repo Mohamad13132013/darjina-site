@@ -48,7 +48,9 @@
 - footer.about_title: دارجينا
 - footer.about_text: تطبيق عربي لمحلات خياطة العبايات في الخليج. يرتّب الفواتير والقياسات والدفعات ومتابعة الطلبات في مكان واحد.
 - footer.links_title: روابط
-- footer.links: [الرئيسية، المزايا، كيف يعمل، من نحن، تواصل معنا، سياسة الخصوصية]
+- footer.links: [الرئيسية، المزايا، كيف يعمل، من نحن، تواصل معنا، سياسة الخصوصية، حذف الحساب]
+- footer.delete_account: حذف الحساب
+  <!-- TICKET-064: link to /delete-account/ (ar) or /en/delete-account/ (en), after the privacy link -->
 - footer.contact_title: تواصل
 - footer.contact_lines:
   - البريد: info@darjina.com

@@ -48,7 +48,9 @@
 - footer.about_title: Darjina
 - footer.about_text: An Arabic-first app for abaya tailor shops in the GCC. It keeps receipts, measurements, payments and order tracking together in one place.
 - footer.links_title: Links
-- footer.links: [Home, Features, How it works, About us, Contact us, Privacy policy]
+- footer.links: [Home, Features, How it works, About us, Contact us, Privacy policy, Delete your account]
+- footer.delete_account: Delete your account
+  <!-- TICKET-064: link to /delete-account/ (ar) or /en/delete-account/ (en), after the privacy link -->
 - footer.contact_title: Contact
 - footer.contact_lines:
   - Email: info@darjina.com

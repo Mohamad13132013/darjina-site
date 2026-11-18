@@ -96,4 +96,20 @@
     <xhtml:link rel="alternate" hreflang="en" href="https://darjina.com/en/privacy/"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://darjina.com/privacy/"/>
   </url>
+  <url>
+    <loc>https://darjina.com/delete-account/</loc>
+    <lastmod>2026-11-18</lastmod>
+    <priority>0.3</priority>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://darjina.com/delete-account/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://darjina.com/en/delete-account/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://darjina.com/delete-account/"/>
+  </url>
+  <url>
+    <loc>https://darjina.com/en/delete-account/</loc>
+    <lastmod>2026-11-18</lastmod>
+    <priority>0.3</priority>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://darjina.com/delete-account/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://darjina.com/en/delete-account/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://darjina.com/delete-account/"/>
+  </url>
 </urlset>

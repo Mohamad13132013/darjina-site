@@ -14,7 +14,7 @@
 ## section#intro
 
 - intro.title: Privacy policy
-- intro.updated: Last updated: 8 November 2026
+- intro.updated: Last updated: 18 November 2026
 - intro.text: This policy explains how we collect, use and protect data in the Darjina app and on the darjina.com website. We've written it in plain language; if you have a question, email us at info@darjina.com.
 
 ---
@@ -102,7 +102,8 @@
 - retention.title: Retention and deletion
 - retention.items:
   - Inside the app, records are never permanently deleted during normal use; "deactivating" hides a record from new selections and keeps the full history of orders and payments.
-  - If a shop wants to end the service and delete its data, or a customer wants her data deleted, the request should be sent to info@darjina.com.
+  - To delete an account in the app, or to ask for the deletion by email, see the {link} page.
+    <!-- privacy.delete_link_sentence; {link} = privacy.delete_link_text “Delete your account” → /en/delete-account/ (TICKET-064, docs/design/copy-account-deletion-page.md) -->
   - We respond to deletion requests as soon as we can, and we may need to verify the identity of the person making the request, or refer back to the shop concerned.
   - Each shop's data is kept for as long as the shop uses the app.
   - A shop's data is never shared with any other entity.

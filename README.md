@@ -9,7 +9,7 @@ vanilla JS file. No framework, no build step needed to host it.
 ```
 website/
   index.html                 Arabic home            (lang="ar" dir="rtl")
-  features/ how-it-works/ about/ contact/ privacy/   Arabic pages (folder/index.html)
+  features/ how-it-works/ about/ contact/ privacy/ delete-account/   Arabic pages (folder/index.html)
   404.html                   Arabic 404 (noindex)
   en/                        English mirror of every page + en/404.html (lang="en" dir="ltr")
   assets/css/site.css        the whole design system (logical properties, works for RTL and LTR)
