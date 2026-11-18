@@ -2,7 +2,7 @@
 """Stamp the shared <head>, header and footer around each page body.
 
 The site itself is plain static HTML; this script only saves copy-pasting the
-chrome into 14 files. Python 3.8+, standard library only. Run from anywhere:
+chrome into 16 files. Python 3.8+, standard library only. Run from anywhere:
 
     python website/tools/build.py
 

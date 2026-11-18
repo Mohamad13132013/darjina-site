@@ -14,7 +14,7 @@
 ## section#intro
 
 - intro.title: Privacy policy
-- intro.updated: Last updated: 18 November 2026
+- intro.updated: Last updated: 19 November 2026
 - intro.text: This policy explains how we collect, use and protect data in the Darjina app and on the darjina.com website. We've written it in plain language; if you have a question, email us at info@darjina.com.
 
 ---
@@ -92,8 +92,8 @@
 
 ## section#accounts
 
-- accounts.title: Staff accounts
-- accounts.text: There is no self sign-up in the app. The shop owner creates staff accounts and sets their passwords, and can deactivate any account. Staff members can change their own password in the app. A staff member's personal statistics show an anonymous comparison with colleagues, and only appear when the shop has at least three active colleagues.
+- accounts.title: Accounts
+- accounts.text: A shop owner can create an account for the shop in the app; the shop starts working once we have reviewed and approved the request. Staff accounts are created by the shop owner, who sets their passwords and can deactivate any of them. Everyone can change their own password in the app. A staff member's personal statistics show an anonymous comparison with colleagues, and only appear when the shop has at least three active colleagues.
 
 ---
 
@@ -105,7 +105,7 @@
   - To delete an account in the app, or to ask for the deletion by email, see the {link} page.
     <!-- privacy.delete_link_sentence; {link} = privacy.delete_link_text “Delete your account” → /en/delete-account/ (TICKET-064, docs/design/copy-account-deletion-page.md) -->
   - We respond to deletion requests as soon as we can, and we may need to verify the identity of the person making the request, or refer back to the shop concerned.
-  - Each shop's data is kept for as long as the shop uses the app.
+  - Each shop's data is kept for as long as the shop uses the app, and after it is closed it stays deactivated and seen by nobody. <!-- OQ-162 -->
   - A shop's data is never shared with any other entity.
 
 ---
@@ -113,7 +113,8 @@
 ## section#rights
 
 - rights.title: Your rights
-- rights.text: You can ask to see, correct or delete your data by emailing us at info@darjina.com. A customer's data can also be corrected directly by the shop that recorded it.
+- rights.text: You can ask for a copy of your data, or for it to be corrected, by emailing us at info@darjina.com. An account can be deleted in the app, or you can ask for the deletion as explained on the {link} page. When an account is deleted, its holder's personal details and sign-in are deleted, and the shop's business records (receipts, payments, customers and their measurements) stay. If the shop is closed with the deletion, its records are kept deactivated and seen by nobody. We do not erase a shop's records on request. <!-- OQ-162 --> A customer's data can also be corrected directly by the shop that recorded it.
+  <!-- {link} = privacy.delete_link_text “Delete your account” → /en/delete-account/; the address is a mailto: link (TICKET-064, docs/design/copy-account-deletion-page.md "Privacy page replacements") -->
 
 ---
 
