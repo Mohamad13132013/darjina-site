@@ -63,7 +63,7 @@
 ## section#today
 
 - today.title: Where we are today
-- today.text: Darjina is available now on iPhone through TestFlight, and the Android version is ready. We're starting in Bahrain, and the app is ready for the rest of the GCC, with each shop's own currency and country code.
+- today.text: Darjina is available now on iPhone from the App Store, and the Android version is coming soon to Google Play. We're starting in Bahrain, and the app is ready for the rest of the GCC, with each shop's own currency and country code.
 
 ---
 

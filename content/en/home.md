@@ -18,7 +18,7 @@
 - hero.cta_primary_href: https://wa.me/97334047233
 - hero.cta_secondary: See the features
 - hero.cta_secondary_href: /features
-- hero.note: Available now on iPhone through TestFlight; the Android version is ready.
+- hero.note: Available now on iPhone from the App Store; the Android version is coming soon to Google Play.
 - hero.image: [Image: a phone showing a new receipt screen next to an abaya picture marked with measurement points]
 - hero.image_alt: Darjina app screen showing a new receipt and the customer's measurements on an abaya picture
 
@@ -155,7 +155,7 @@
   - faq.q1: Is Darjina suitable for a small shop?
     faq.a1: Yes. It works for a shop with one branch and one staff member, and it grows with you as you open new branches.
   - faq.q2: Which devices does it run on?
-    faq.a2: It's available now on iPhone through TestFlight, and the Android version is ready. It needs an internet connection while you work.
+    faq.a2: It's available now on iPhone from the App Store, and the Android version is coming soon to Google Play. It needs an internet connection while you work.
   - faq.q3: Does it support my country's currency?
     faq.a3: Yes. Each shop has its own currency: Bahraini dinar by default, as well as Saudi riyal, UAE dirham and others, and every receipt keeps the currency it was created in.
   - faq.q4: Can staff see everything?

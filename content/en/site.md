@@ -56,7 +56,7 @@
   - Email: info@darjina.com
   - Phone and WhatsApp: +973 3404 7233
   - Kingdom of Bahrain
-- footer.availability: Available now on iPhone through TestFlight; the Android version is ready.
+- footer.availability: Available now on iPhone from the App Store; the Android version is coming soon to Google Play.
 - footer.copyright: © 2026 Darjina. All rights reserved.
 - footer.made_in: Made in Bahrain for abaya shops across the GCC.
 

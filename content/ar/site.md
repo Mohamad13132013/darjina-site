@@ -56,7 +56,7 @@
   - البريد: info@darjina.com
   - هاتف وواتساب: +973 3404 7233
   - مملكة البحرين
-- footer.availability: متوفر الآن على iPhone عبر TestFlight، ونسخة Android جاهزة.
+- footer.availability: متوفر الآن على iPhone من App Store، ونسخة Android قريباً على Google Play.
 - footer.copyright: © 2026 دارجينا. جميع الحقوق محفوظة.
 - footer.made_in: صُنع في البحرين لمحلات العبايات في الخليج.
 
