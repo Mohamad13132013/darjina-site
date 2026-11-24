@@ -102,6 +102,6 @@
 - final_cta.title: جرّب الرحلة بنفسك
 - final_cta.text: نريك هذه الخطوات على جوالك في عرض تجريبي قصير.
 - final_cta.cta_primary: اطلب عرضاً تجريبياً
-- final_cta.cta_primary_href: https://wa.me/97334047233
+- final_cta.cta_primary_href: https://wa.me/97336369493
 - final_cta.cta_secondary: شوف كل المزايا
 - final_cta.cta_secondary_href: /features

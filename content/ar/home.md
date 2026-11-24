@@ -15,7 +15,7 @@
 - hero.headline: كل طلب عباية… من القياس إلى التسليم، في جوالك.
 - hero.subheadline: دارجينا تطبيق عربي يسجّل الزبونة وقياساتها وفاتورتها في دقيقة، ويتابع الدفعات والطلبات حتى يوم التسليم. لصاحب المحل ولفريق الكاونتر.
 - hero.cta_primary: كلّمنا على واتساب
-- hero.cta_primary_href: https://wa.me/97334047233
+- hero.cta_primary_href: https://wa.me/97336369493
 - hero.cta_secondary: شوف المزايا
 - hero.cta_secondary_href: /features
 - hero.note: متوفر الآن على iPhone من App Store، ونسخة Android قريباً على Google Play.
@@ -172,6 +172,6 @@
 - final_cta.title: جاهز تودّع دفتر الفواتير؟
 - final_cta.text: كلّمنا ونريك دارجينا على طلبات محلك الحقيقية.
 - final_cta.cta_primary: كلّمنا على واتساب
-- final_cta.cta_primary_href: https://wa.me/97334047233
+- final_cta.cta_primary_href: https://wa.me/97336369493
 - final_cta.cta_secondary: راسلنا بالبريد
 - final_cta.cta_secondary_href: mailto:info@darjina.com

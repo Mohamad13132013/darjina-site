@@ -23,7 +23,7 @@ website/
 
 Every page has: `<title>`, meta description, canonical (`https://darjina.com/...`), `hreflang`
 alternates (ar, en, x-default = ar), Open Graph + Twitter card tags, JSON-LD `Organization`
-(name, email, telephone +97334047233, url), skip link, one `<h1>`, landmark elements.
+(name, email, telephone +97336369493, url), skip link, one `<h1>`, landmark elements.
 The language switch in the header links each page to its counterpart.
 
 ## How to edit content

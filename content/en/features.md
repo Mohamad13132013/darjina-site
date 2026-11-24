@@ -168,6 +168,6 @@
 - final_cta.title: See Darjina with your shop's orders
 - final_cta.text: We'll arrange a short demo for you and answer your questions.
 - final_cta.cta_primary: Request a demo
-- final_cta.cta_primary_href: https://wa.me/97334047233
+- final_cta.cta_primary_href: https://wa.me/97336369493
 - final_cta.cta_secondary: Email us
 - final_cta.cta_secondary_href: mailto:info@darjina.com

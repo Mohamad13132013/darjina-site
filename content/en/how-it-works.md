@@ -102,6 +102,6 @@
 - final_cta.title: Try the journey yourself
 - final_cta.text: We'll walk you through these steps on your phone in a short demo.
 - final_cta.cta_primary: Request a demo
-- final_cta.cta_primary_href: https://wa.me/97334047233
+- final_cta.cta_primary_href: https://wa.me/97336369493
 - final_cta.cta_secondary: See all features
 - final_cta.cta_secondary_href: /features

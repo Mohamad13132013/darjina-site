@@ -15,7 +15,7 @@
 - hero.headline: Every abaya order, from measuring to delivery, on your phone.
 - hero.subheadline: Darjina is an Arabic-first app that records your customer, her measurements and her receipt in a minute, then tracks payments and orders right up to delivery day. Built for shop owners and their counter team.
 - hero.cta_primary: Chat with us on WhatsApp
-- hero.cta_primary_href: https://wa.me/97334047233
+- hero.cta_primary_href: https://wa.me/97336369493
 - hero.cta_secondary: See the features
 - hero.cta_secondary_href: /features
 - hero.note: Available now on iPhone from the App Store; the Android version is coming soon to Google Play.
@@ -172,6 +172,6 @@
 - final_cta.title: Ready to say goodbye to the receipt book?
 - final_cta.text: Get in touch and we'll show you Darjina with your shop's real orders.
 - final_cta.cta_primary: Chat with us on WhatsApp
-- final_cta.cta_primary_href: https://wa.me/97334047233
+- final_cta.cta_primary_href: https://wa.me/97336369493
 - final_cta.cta_secondary: Email us
 - final_cta.cta_secondary_href: mailto:info@darjina.com

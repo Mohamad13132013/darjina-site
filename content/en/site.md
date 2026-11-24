@@ -27,11 +27,11 @@
 
 ## common CTAs (reused across pages)
 - cta.whatsapp: Chat with us on WhatsApp
-- cta.whatsapp_href: https://wa.me/97334047233
+- cta.whatsapp_href: https://wa.me/97336369493
 - cta.email: Email us
 - cta.email_href: mailto:info@darjina.com
 - cta.demo: Request a demo
-- cta.demo_href: https://wa.me/97334047233?text=I%27d%20like%20a%20demo%20of%20the%20Darjina%20app
+- cta.demo_href: https://wa.me/97336369493?text=I%27d%20like%20a%20demo%20of%20the%20Darjina%20app
   <!-- prefilled text: "I'd like a demo of the Darjina app" -->
 - cta.features: See the features
 - cta.how_it_works: See how it works
@@ -39,9 +39,9 @@
 
 ## contact (shared)
 - contact.email: info@darjina.com
-- contact.phone_display: +973 3404 7233
-- contact.phone_href: tel:+97334047233
-- contact.whatsapp_display: +973 3404 7233
+- contact.phone_display: +973 3636 9493
+- contact.phone_href: tel:+97336369493
+- contact.whatsapp_display: +973 3636 9493
 - contact.location: Kingdom of Bahrain
 
 ## footer
@@ -54,7 +54,7 @@
 - footer.contact_title: Contact
 - footer.contact_lines:
   - Email: info@darjina.com
-  - Phone and WhatsApp: +973 3404 7233
+  - Phone and WhatsApp: +973 3636 9493
   - Kingdom of Bahrain
 - footer.availability: Available now on iPhone from the App Store; the Android version is coming soon to Google Play.
 - footer.copyright: © 2026 Darjina. All rights reserved.

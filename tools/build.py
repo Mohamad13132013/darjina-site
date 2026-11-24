@@ -34,9 +34,9 @@ NAV = ["home", "features", "how-it-works", "about", "contact"]
 FOOTER_LINKS = [(n, "nav." + n) for n in ("home", "features", "how-it-works", "about", "contact", "privacy")]
 FOOTER_LINKS.append(("delete-account", "footer.delete_account"))
 
-WA = "https://wa.me/97334047233"
+WA = "https://wa.me/97336369493"
 MAIL = "mailto:info@darjina.com"
-TEL = "tel:+97334047233"
+TEL = "tel:+97336369493"
 
 # Shared strings, copied from content/<lang>/site.md (keys kept in comments)
 S = {
@@ -48,7 +48,7 @@ S = {
         "nav.lang_switch": "English", "nav.cta_primary": "اطلب عرضاً تجريبياً",
         "nav.menu_open": "القائمة", "nav.menu_close": "إغلاق القائمة",
         "nav.skip": "انتقل إلى المحتوى", "nav.aria": "القائمة الرئيسية",
-        "cta.demo_href": "https://wa.me/97334047233?text=%D8%A3%D8%B1%D9%8A%D8%AF%20%D8%B9%D8%B1%D8%B6%D8%A7%D9%8B%20%D8%AA%D8%AC%D8%B1%D9%8A%D8%A8%D9%8A%D8%A7%D9%8B%20%D9%84%D8%AA%D8%B7%D8%A8%D9%8A%D9%82%20%D8%AF%D8%B1%D8%AC%D9%8A%D9%86%D8%A9",
+        "cta.demo_href": "https://wa.me/97336369493?text=%D8%A3%D8%B1%D9%8A%D8%AF%20%D8%B9%D8%B1%D8%B6%D8%A7%D9%8B%20%D8%AA%D8%AC%D8%B1%D9%8A%D8%A8%D9%8A%D8%A7%D9%8B%20%D9%84%D8%AA%D8%B7%D8%A8%D9%8A%D9%82%20%D8%AF%D8%B1%D8%AC%D9%8A%D9%86%D8%A9",
         "footer.about_text": "تطبيق عربي لمحلات خياطة العبايات في الخليج. يرتّب الفواتير والقياسات والدفعات ومتابعة الطلبات في مكان واحد.",
         "footer.links_title": "روابط", "footer.contact_title": "تواصل",
         "footer.email_label": "البريد:", "footer.phone_label": "هاتف وواتساب:",
@@ -71,7 +71,7 @@ S = {
         "nav.lang_switch": "العربية", "nav.cta_primary": "Request a demo",
         "nav.menu_open": "Menu", "nav.menu_close": "Close menu",
         "nav.skip": "Skip to content", "nav.aria": "Main menu",
-        "cta.demo_href": "https://wa.me/97334047233?text=I%27d%20like%20a%20demo%20of%20the%20Darjina%20app",
+        "cta.demo_href": "https://wa.me/97336369493?text=I%27d%20like%20a%20demo%20of%20the%20Darjina%20app",
         "footer.about_text": "An Arabic-first app for abaya tailor shops in the GCC. It keeps receipts, measurements, payments and order tracking together in one place.",
         "footer.links_title": "Links", "footer.contact_title": "Contact",
         "footer.email_label": "Email:", "footer.phone_label": "Phone and WhatsApp:",
@@ -210,10 +210,10 @@ def jsonld(lang):
         "url": DOMAIN + "/",
         "logo": DOMAIN + "/assets/img/icon-512.png",
         "email": "info@darjina.com",
-        "telephone": "+97334047233",
+        "telephone": "+97336369493",
         "address": {"@type": "PostalAddress", "addressCountry": "BH"},
         "contactPoint": [{
-            "@type": "ContactPoint", "telephone": "+97334047233", "email": "info@darjina.com",
+            "@type": "ContactPoint", "telephone": "+97336369493", "email": "info@darjina.com",
             "contactType": "sales", "areaServed": ["BH", "SA", "AE", "KW", "QA", "OM"],
             "availableLanguage": ["ar", "en"],
         }],
@@ -343,7 +343,7 @@ def footer(lang):
         <h2>{s["footer.contact_title"]}</h2>
         <ul class="footer-contact">
           <li>{icon("mail")}<span>{s["footer.email_label"]} <a href="{MAIL}">info@darjina.com</a></span></li>
-          <li>{icon("chat")}<span>{s["footer.phone_label"]} <a href="{WA}" class="ltr">+973 3404 7233</a></span></li>
+          <li>{icon("chat")}<span>{s["footer.phone_label"]} <a href="{WA}" class="ltr">+973 3636 9493</a></span></li>
           <li>{icon("map-pin")}<span>{s["footer.location"]}</span></li>
         </ul>
       </div>

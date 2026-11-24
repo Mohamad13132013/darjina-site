@@ -72,6 +72,6 @@
 - final_cta.title: تحب تشاركنا رأيك؟
 - final_cta.text: نطوّر دارجينا على ملاحظات أصحاب المحلات. كلّمنا، ورأيك يهمنا.
 - final_cta.cta_primary: كلّمنا على واتساب
-- final_cta.cta_primary_href: https://wa.me/97334047233
+- final_cta.cta_primary_href: https://wa.me/97336369493
 - final_cta.cta_secondary: راسلنا بالبريد
 - final_cta.cta_secondary_href: mailto:info@darjina.com

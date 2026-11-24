@@ -4,7 +4,7 @@
 <!-- No form backend: every action is a wa.me, mailto: or tel: link. -->
 
 - page.title: Contact us | Darjina
-- page.meta_description: Contact Darjina on WhatsApp at +973 3404 7233 or by email at info@darjina.com, and request a demo for your abaya shop.
+- page.meta_description: Contact Darjina on WhatsApp at +973 3636 9493 or by email at info@darjina.com, and request a demo for your abaya shop.
 <!-- ≤155 chars -->
 
 ---
@@ -21,16 +21,16 @@
 - channels.items:
   - channels.whatsapp.icon: whatsapp
     channels.whatsapp.title: WhatsApp
-    channels.whatsapp.value: +973 3404 7233
+    channels.whatsapp.value: +973 3636 9493
     channels.whatsapp.text: The quickest way to reach us.
     channels.whatsapp.cta: Open chat
-    channels.whatsapp.href: https://wa.me/97334047233
+    channels.whatsapp.href: https://wa.me/97336369493
   - channels.phone.icon: phone
     channels.phone.title: Phone
-    channels.phone.value: +973 3404 7233
+    channels.phone.value: +973 3636 9493
     channels.phone.text: Call us directly.
     channels.phone.cta: Call now
-    channels.phone.href: tel:+97334047233
+    channels.phone.href: tel:+97336369493
   - channels.email.icon: mail
     channels.email.title: Email
     channels.email.value: info@darjina.com
@@ -57,7 +57,7 @@
   - The device you use (iPhone or Android).
   - A convenient time for the demo.
 - demo.cta_primary: Request a demo on WhatsApp
-- demo.cta_primary_href: https://wa.me/97334047233?text=I%27d%20like%20a%20demo%20of%20the%20Darjina%20app
+- demo.cta_primary_href: https://wa.me/97336369493?text=I%27d%20like%20a%20demo%20of%20the%20Darjina%20app
   <!-- prefilled: "I'd like a demo of the Darjina app" -->
 - demo.cta_secondary: Request a demo by email
 - demo.cta_secondary_href: mailto:info@darjina.com?subject=Demo%20request%20-%20Darjina

@@ -27,11 +27,11 @@
 
 ## common CTAs (reused across pages)
 - cta.whatsapp: كلّمنا على واتساب
-- cta.whatsapp_href: https://wa.me/97334047233
+- cta.whatsapp_href: https://wa.me/97336369493
 - cta.email: راسلنا بالبريد
 - cta.email_href: mailto:info@darjina.com
 - cta.demo: اطلب عرضاً تجريبياً
-- cta.demo_href: https://wa.me/97334047233?text=%D8%A3%D8%B1%D9%8A%D8%AF%20%D8%B9%D8%B1%D8%B6%D8%A7%D9%8B%20%D8%AA%D8%AC%D8%B1%D9%8A%D8%A8%D9%8A%D8%A7%D9%8B%20%D9%84%D8%AA%D8%B7%D8%A8%D9%8A%D9%82%20%D8%AF%D8%B1%D8%AC%D9%8A%D9%86%D8%A9
+- cta.demo_href: https://wa.me/97336369493?text=%D8%A3%D8%B1%D9%8A%D8%AF%20%D8%B9%D8%B1%D8%B6%D8%A7%D9%8B%20%D8%AA%D8%AC%D8%B1%D9%8A%D8%A8%D9%8A%D8%A7%D9%8B%20%D9%84%D8%AA%D8%B7%D8%A8%D9%8A%D9%82%20%D8%AF%D8%B1%D8%AC%D9%8A%D9%86%D8%A9
   <!-- prefilled text: «أريد عرضاً تجريبياً لتطبيق دارجينا» -->
 - cta.features: شوف المزايا
 - cta.how_it_works: شوف كيف يعمل
@@ -39,9 +39,9 @@
 
 ## contact (shared)
 - contact.email: info@darjina.com
-- contact.phone_display: +973 3404 7233
-- contact.phone_href: tel:+97334047233
-- contact.whatsapp_display: +973 3404 7233
+- contact.phone_display: +973 3636 9493
+- contact.phone_href: tel:+97336369493
+- contact.whatsapp_display: +973 3636 9493
 - contact.location: مملكة البحرين
 
 ## footer
@@ -54,7 +54,7 @@
 - footer.contact_title: تواصل
 - footer.contact_lines:
   - البريد: info@darjina.com
-  - هاتف وواتساب: +973 3404 7233
+  - هاتف وواتساب: +973 3636 9493
   - مملكة البحرين
 - footer.availability: متوفر الآن على iPhone من App Store، ونسخة Android قريباً على Google Play.
 - footer.copyright: © 2026 دارجينا. جميع الحقوق محفوظة.

@@ -72,6 +72,6 @@
 - final_cta.title: Want to share your thoughts?
 - final_cta.text: We develop Darjina based on feedback from shop owners. Get in touch; your opinion matters to us.
 - final_cta.cta_primary: Chat with us on WhatsApp
-- final_cta.cta_primary_href: https://wa.me/97334047233
+- final_cta.cta_primary_href: https://wa.me/97336369493
 - final_cta.cta_secondary: Email us
 - final_cta.cta_secondary_href: mailto:info@darjina.com

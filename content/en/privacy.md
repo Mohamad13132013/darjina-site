@@ -22,7 +22,7 @@
 ## section#who-we-are
 
 - who.title: Who we are
-- who.text: Darjina is an app for abaya tailor shops, based in the Kingdom of Bahrain. The entity responsible for the service is Darjina (دارجينا). Contact: info@darjina.com or +973 3404 7233.
+- who.text: Darjina is an app for abaya tailor shops, based in the Kingdom of Bahrain. The entity responsible for the service is Darjina (دارجينا). Contact: info@darjina.com or +973 3636 9493.
 
 ---
 
@@ -137,5 +137,5 @@
 - contact.title: Contact us
 - contact.items:
   - Email: info@darjina.com
-  - Phone and WhatsApp: +973 3404 7233
+  - Phone and WhatsApp: +973 3636 9493
   - Kingdom of Bahrain
