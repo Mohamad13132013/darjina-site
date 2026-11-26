@@ -16,10 +16,12 @@
 - hero.eyebrow: لمحلات خياطة العبايات في الخليج
 - hero.headline: كل طلب عباية… من القياس إلى التسليم، في جوالك.
 - hero.subheadline: دارجينا تطبيق عربي يسجّل الزبونة وقياساتها وفاتورتها في دقيقة، ويستقبل طلبات زبائنك أونلاين من انستقرام، ويتابع الدفعات والطلبات حتى يوم التسليم. لصاحب المحل ولفريق الكاونتر.
-- hero.cta_primary: كلّمنا على واتساب
-- hero.cta_primary_href: https://wa.me/97336369493
-- hero.cta_secondary: شوف المزايا
-- hero.cta_secondary_href: /features
+- hero.cta_primary: حمّل التطبيق من App Store
+- hero.cta_primary_href: https://apps.apple.com/bh/app/darjina/id6758571914
+- hero.cta_secondary: كلّمنا على واتساب
+- hero.cta_secondary_href: https://wa.me/97336369493
+- hero.cta_tertiary: شوف المزايا
+- hero.cta_tertiary_href: /features
 - hero.note: متوفر الآن على iPhone من App Store، ونسخة Android قريباً على Google Play.
 - hero.image: [صورة: جوال يعرض شاشة فاتورة جديدة بجانب صورة عباية عليها نقاط القياس]
 - hero.image_alt: شاشة تطبيق دارجينا تعرض فاتورة جديدة وقياسات الزبونة على صورة عباية
