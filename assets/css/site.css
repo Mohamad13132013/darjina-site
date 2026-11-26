@@ -835,3 +835,24 @@ html[lang="en"] .hours h2 { font-size: 1.7rem; }
 .primary-nav .nav-mobile-cta .btn { display: flex; color: var(--ink); background: var(--mint); padding: 12px 18px; border-radius: 999px; }
 .primary-nav .nav-mobile-cta .btn:hover { background: #fff; color: var(--ink); }
 .hero .lead, .page-hero .lead { color: var(--on-dark-muted); }
+
+/* ---------- Online orders (home highlight, features group) ---------- */
+.badge--new { background: var(--sand); color: var(--ink); text-decoration: none; display: inline-flex; align-items: center; gap: 6px; margin-block-end: 14px; }
+.badge--new svg { width: 16px; height: 16px; }
+.badge--new:hover { filter: brightness(1.06); }
+.online { position: relative; overflow: hidden; }
+.online-visual { position: relative; display: flex; justify-content: center; padding-block: 12px; }
+.online-visual .float-card--a { inset-block-start: 64%; }
+.dash.online::before { background: radial-gradient(55% 70% at 90% 40%, rgb(208 173 116 / .18), transparent 70%); }
+.dash.online .ticks li::before {
+  background-color: rgb(208 173 116 / .2);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23d0ad74' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E");
+}
+.online .btn-row { margin-block-start: 26px; }
+.online-link { direction: ltr; unicode-bidi: isolate; font-weight: 600; color: var(--sand); }
+.scr-model { display: flex; gap: .6em; align-items: center; }
+.scr-model--on { border-color: var(--sea); box-shadow: 0 0 0 1.5px var(--sea) inset; }
+.scr-model .chip { margin-block-start: .25em; }
+.scr-thumb { flex: none; width: 3.2em; height: 3.6em; border-radius: .6em; background: linear-gradient(160deg, var(--mint), #f6efe1); display: grid; place-items: center; overflow: hidden; }
+.scr-thumb--b { background: linear-gradient(160deg, #efe2c6, var(--mint)); }
+.scr-thumb img { width: 80%; height: auto; }

@@ -8,6 +8,7 @@ description: Every Darjina feature: receipts by mobile number, measurements on a
     <h1 id="page-title">Every Darjina feature</h1>
     <p class="lead">We designed every screen for the counter: your customer is waiting, time is short, and a mistake in a measurement or an amount is costly. Here's what the app offers today, and what's coming.</p>
     <ul class="subnav">
+      <li><a href="#online">Online orders</a></li>
       <li><a href="#orders">Orders and receipts</a></li>
       <li><a href="#measurements">Measurements</a></li>
       <li><a href="#payments">Payments</a></li>
@@ -17,6 +18,30 @@ description: Every Darjina feature: receipts by mobile number, measurements on a
       <li><a href="#language-privacy">Language and privacy</a></li>
       <li><a href="#coming-soon">Coming soon</a></li>
     </ul>
+  </div>
+</section>
+
+<section class="section section--dark dash online" id="online" aria-labelledby="online-title">
+  <div class="wrap dash-grid">
+    <div>
+      <div class="group-head"><span class="icon-badge">{{icon:link}}</span><h2 id="online-title">Online orders from Instagram and WhatsApp</h2></div>
+      <p class="lead">An order page for your shop that you switch on in the app: your customer orders from it directly, and the request reaches your team to turn into a receipt.</p>
+      <ul class="ticks">
+        <li>A page for your shop with a link named after your Instagram account, such as <span class="online-link">darjina.com/o/yourshop</span>, and a direct link for each model.</li>
+        <li>Model catalogue: photos or an Instagram post link, a name, a fixed code and the price.</li>
+        <li>Your customer picks the model, the number of pieces and her preferred date, and sees the price and the total before sending.</li>
+        <li>Measurements are optional: she comes to the shop to be measured, uses her previous measurements, or enters them on the abaya picture.</li>
+        <li>Optional stock per model: no one can order more than you have, a sold-out model disappears from the page, and you get an alert to add pieces.</li>
+        <li>A notification for the shop owner on every new request, and a list of online requests for your team by branch.</li>
+        <li>Contact your customer on WhatsApp or by phone, then turn the request into a receipt with its price and measurements, or decline it with a reason.</li>
+        <li>Protection against fake requests, and a request nobody answers expires after a period the shop sets.</li>
+      </ul>
+      <p class="note" style="margin-block-start:20px">{{icon:info}}<span>For now, payment is made at the shop as usual; online payment is coming soon.</span></p>
+    </div>
+    <div class="online-visual">
+      {{> mock-order}}
+      <div class="float-card float-card--a" aria-hidden="true"><span class="icon-badge">{{icon:package}}</span><div><b>New online request</b><span>Plain crepe abaya × 2</span></div></div>
+    </div>
   </div>
 </section>
 
@@ -169,7 +194,6 @@ description: Every Darjina feature: receipts by mobile number, measurements on a
       <h2 id="soon-title" style="margin-block-start:12px">What we're working on</h2>
       <p class="lead">These features are being planned and are not available yet. We'll announce them when they're ready.</p>
       <div class="soon-cards">
-        <article class="soon-card"><h3>An order page for your shop</h3><p>A link you add to Instagram or WhatsApp, where your customer can order directly; the request reaches your team to turn into a receipt. Optional, and switched on by the shop owner.</p></article>
         <article class="soon-card"><h3>Online payment links</h3><p>Send your customer a payment link once her request has become a receipt.</p></article>
       </div>
       <p class="note">{{icon:info}}<span>Dates have not been set yet.</span></p>

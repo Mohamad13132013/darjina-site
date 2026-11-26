@@ -18,7 +18,8 @@
   "share_alt": "مشاركة فاتورة PDF من دارجينا على واتساب",
   "list_alt": "قائمة الطلبات في دارجينا مرتّبة حسب موعد التسليم مع البحث والفلاتر",
   "pay_alt": "سجل الدفعات لفاتورة في دارجينا مع علامة مدفوع",
-  "myday_alt": "شاشة «يومي» للموظف في تطبيق دارجينا"
+  "myday_alt": "شاشة «يومي» للموظف في تطبيق دارجينا",
+  "order_page": "صفحة الطلب", "handle": "o/yourshop", "model1": "عباية كريب سادة", "model2": "عباية مطرزة", "code1": "A12", "code2": "B07", "left3": "باقي 3", "pieces_n": "القطع: 2", "total": "الإجمالي", "send_order": "أرسل الطلب", "new_request": "طلب أونلاين جديد", "new_request_sub": "عباية كريب سادة × 2", "order_alt": "صفحة طلب أونلاين لمحل عبايات: موديلان بالسعر، وعدد القطع والإجمالي، وزر إرسال الطلب"
  },
  "en": {
   "receipt": "Receipt", "initial": "N", "customer": "Noora", "initial2": "N", "customer2": "Nouf", "customer3": "Maryam",
@@ -39,6 +40,7 @@
   "share_alt": "Sharing a Darjina PDF receipt on WhatsApp",
   "list_alt": "Orders list in Darjina sorted by delivery date, with search and filters",
   "pay_alt": "Payment history of a receipt in Darjina with the paid in full badge",
-  "myday_alt": "The staff “My day” screen in the Darjina app"
+  "myday_alt": "The staff “My day” screen in the Darjina app",
+  "order_page": "Order page", "handle": "o/yourshop", "model1": "Plain crepe abaya", "model2": "Embroidered abaya", "code1": "A12", "code2": "B07", "left3": "Only 3 left", "pieces_n": "Pieces: 2", "total": "Total", "send_order": "Send request", "new_request": "New online request", "new_request_sub": "Plain crepe abaya × 2", "order_alt": "An abaya shop's online order page: two models with prices, the pieces and total, and a send button"
  }
 }

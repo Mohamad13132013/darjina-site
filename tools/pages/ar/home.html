@@ -1,14 +1,15 @@
 <!--meta
 title: دارجينا | تطبيق محلات خياطة العبايات
-description: فاتورة خلال ثوانٍ، قياسات على صورة العباية، عربون ودفعات، ومتابعة كل طلب حتى التسليم. تطبيق عربي لمحلات العبايات في الخليج.
+description: فاتورة خلال ثوانٍ، قياسات على صورة العباية، طلبات أونلاين من انستقرام، عربون ودفعات، ومتابعة كل طلب حتى التسليم. تطبيق عربي لمحلات العبايات في الخليج.
 -->
 <section class="hero" id="hero" aria-labelledby="hero-title">
   <img class="hero-mark" src="/assets/img/mark.webp" width="390" height="400" alt="" aria-hidden="true">
   <div class="wrap hero-grid">
     <div>
+      <a class="badge badge--new" href="#online">{{icon:sparkle}}جديد: استقبل طلبات انستقرام أونلاين</a>
       <p class="eyebrow">لمحلات خياطة العبايات في الخليج</p>
       <h1 id="hero-title">كل طلب عباية… <span class="accent">من القياس إلى التسليم</span>، في جوالك.</h1>
-      <p class="lead">دارجينا تطبيق عربي يسجّل الزبونة وقياساتها وفاتورتها في دقيقة، ويتابع الدفعات والطلبات حتى يوم التسليم. لصاحب المحل ولفريق الكاونتر.</p>
+      <p class="lead">دارجينا تطبيق عربي يسجّل الزبونة وقياساتها وفاتورتها في دقيقة، ويستقبل طلبات زبائنك أونلاين من انستقرام، ويتابع الدفعات والطلبات حتى يوم التسليم. لصاحب المحل ولفريق الكاونتر.</p>
       <div class="btn-row">
         <a class="btn btn--light" href="https://apps.apple.com/bh/app/darjina/id6758571914">{{icon:download}}حمّل التطبيق من App Store</a>
         <a class="btn btn--ghost-dark" href="{{wa}}">{{icon:chat}}كلّمنا على واتساب</a>
@@ -55,6 +56,31 @@ description: فاتورة خلال ثوانٍ، قياسات على صورة ا�
       <article class="card reveal"><span class="icon-badge">{{icon:dashboard}}</span><h3>لوحة صاحب المحل</h3><p>المبالغ المتبقية، الطلبات المتأخرة، المستلم اليوم في كل فرع. أرقام محلك أمامك.</p></article>
     </div>
     <div class="section-foot"><a class="btn btn--ghost" href="{{link:features}}">كل المزايا بالتفصيل<span class="arrow">{{icon:arrow}}</span></a></div>
+  </div>
+</section>
+
+<section class="section section--dark dash online" id="online" aria-labelledby="online-title">
+  <div class="wrap dash-grid">
+    <div>
+      <p class="eyebrow">جديد · طلبات أونلاين</p>
+      <h2 id="online-title">زبوناتك يطلبن من انستقرام… والطلب يصل لجوالك</h2>
+      <p class="lead">فعّل صفحة طلبات محلك وضع رابطها في بايو انستقرام أو في رسائل واتساب. الزبونة تختار الموديل وعدد القطع، وترى السعر والإجمالي، ثم ترسل طلبها. وفريقك يتواصل معها ويحوّل الطلب إلى فاتورة.</p>
+      <ul class="ticks">
+        <li>رابط باسم حسابك في انستقرام مثل <span class="online-link">darjina.com/o/yourshop</span>، ورابط لكل موديل تضعه تحت منشوره.</li>
+        <li>كتالوج موديلاتك بالصور والكود والسعر، تديره من التطبيق.</li>
+        <li>مخزون لكل موديل إن أردت: لا يُطلب أكثر من المتوفر، والموديل النافد يختفي من الصفحة.</li>
+        <li>إشعار على جوالك مع كل طلب جديد، والطلب يتحول إلى فاتورة عادية بخطوة واحدة.</li>
+        <li>اختياري: صاحب المحل يفعّله ويوقفه متى شاء.</li>
+      </ul>
+      <div class="btn-row">
+        <a class="btn btn--light" href="{{wa}}">{{icon:chat}}اطلب عرضاً تجريبياً</a>
+        <a class="btn btn--ghost-dark" href="{{link:features}}#online">تفاصيل الطلبات أونلاين</a>
+      </div>
+    </div>
+    <div class="online-visual">
+      {{> mock-order}}
+      <div class="float-card float-card--a" aria-hidden="true"><span class="icon-badge">{{icon:package}}</span><div><b>طلب أونلاين جديد</b><span>عباية كريب سادة × 2</span></div></div>
+    </div>
   </div>
 </section>
 
@@ -147,6 +173,7 @@ description: فاتورة خلال ثوانٍ، قياسات على صورة ا�
   <div class="wrap wrap--narrow">
     <div class="section-head section-head--center"><h2 id="faq-title">أسئلة متكررة</h2></div>
     <div class="faq">
+      <details><summary>هل تستطيع الزبونة الطلب أونلاين؟</summary><div class="answer"><p>نعم. فعّل صفحة طلبات محلك من التطبيق وضع رابطها في انستقرام أو واتساب. الزبونة تختار الموديل وترسل طلبها، وفريقك يتواصل معها ويحوّله إلى فاتورة. الدفع حالياً في المحل كالمعتاد.</p></div></details>
       <details><summary>هل يناسب دارجينا محلاً صغيراً؟</summary><div class="answer"><p>نعم. يعمل مع محل بفرع واحد وموظف واحد، ويكبر معك إذا فتحت فروعاً جديدة.</p></div></details>
       <details><summary>على أي أجهزة يعمل؟</summary><div class="answer"><p>متوفر الآن على iPhone من <a href="https://apps.apple.com/bh/app/darjina/id6758571914">App Store</a>، ونسخة Android قريباً على Google Play. يحتاج اتصالاً بالإنترنت أثناء العمل.</p></div></details>
       <details><summary>هل يدعم عملة بلدي؟</summary><div class="answer"><p>نعم. لكل محل عملته: الدينار البحريني افتراضياً، والريال السعودي والدرهم الإماراتي وغيرها، وكل فاتورة تحتفظ بالعملة التي أُنشئت بها.</p></div></details>
