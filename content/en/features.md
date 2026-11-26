@@ -12,7 +12,27 @@
 
 - intro.title: Every Darjina feature
 - intro.text: We designed every screen for the counter: your customer is waiting, time is short, and a mistake in a measurement or an amount is costly. Here's what the app offers today, and what's coming.
-- intro.jump_links: [Orders and receipts, Measurements, Payments, Tracking, Branches and staff, Dashboard and reports, Language and privacy, Coming soon]
+- intro.jump_links: [Online orders, Orders and receipts, Measurements, Payments, Tracking, Branches and staff, Dashboard and reports, Language and privacy, Coming soon]
+
+---
+
+## section#online
+
+- online.title: Online orders from Instagram and WhatsApp
+- online.lead: An order page for your shop that you switch on in the app: your customer orders from it directly, and the request reaches your team to turn into a receipt.
+- online.items:
+  - A page for your shop with a link named after your Instagram account, such as darjina.com/o/yourshop, and a direct link for each model.
+  - Model catalogue: photos or an Instagram post link, a name, a fixed code and the price.
+  - Your customer picks the model, the number of pieces and her preferred date, and sees the price and the total before sending.
+  - Measurements are optional: she comes to the shop to be measured, uses her previous measurements, or enters them on the abaya picture.
+  - Optional stock per model: no one can order more than you have, a sold-out model disappears from the page, and you get an alert to add pieces.
+  - A notification for the shop owner on every new request, and a list of online requests for your team by branch.
+  - Contact your customer on WhatsApp or by phone, then turn the request into a receipt with its price and measurements, or decline it with a reason.
+  - Protection against fake requests, and a request nobody answers expires after a period the shop sets.
+- online.note: For now, payment is made at the shop as usual; online payment is coming soon.
+- online.float_card: New online request · Plain crepe abaya × 2
+- online.image: [Image: a phone showing an abaya shop's online order page, next to a "New online request" card]
+- online.image_alt: An abaya shop's online order page: two models with prices, the pieces and total, and a send button
 
 ---
 
@@ -155,10 +175,8 @@
 - coming_soon.title: What we're working on
 - coming_soon.text: These features are being planned and are not available yet. We'll announce them when they're ready.
 - coming_soon.items:
-  - coming_soon.item1.title: An order page for your shop
-    coming_soon.item1.text: A link you add to Instagram or WhatsApp, where your customer can order directly; the request reaches your team to turn into a receipt. Optional, and switched on by the shop owner.
-  - coming_soon.item2.title: Online payment links
-    coming_soon.item2.text: Send your customer a payment link once her request has become a receipt.
+  - coming_soon.item1.title: Online payment links
+    coming_soon.item1.text: Send your customer a payment link once her request has become a receipt.
 - coming_soon.note: Dates have not been set yet.
 
 ---

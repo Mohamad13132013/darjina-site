@@ -75,6 +75,22 @@
 
 ---
 
+## section#online
+
+- online.title: And when the order comes from Instagram?
+- online.lead: Your shop's order page takes the request, and your team continues the same journey.
+- online.items:
+  - online.link.title: She opens your link
+    online.link.text: From your Instagram bio or a WhatsApp message, she opens your shop page and sees the models with their prices.
+  - online.pick.title: She picks and sends
+    online.pick.text: She picks the model and the number of pieces, adds her measurements if she wants, and sends the request.
+  - online.contact.title: Your team contacts her
+    online.contact.text: The shop owner's phone gets a notification and the request shows in the online requests list, so the team contacts her on WhatsApp.
+  - online.receipt.title: It becomes a receipt
+    online.receipt.text: One tap opens a new receipt with the model and the price, and it then moves like any other order until delivery.
+
+---
+
 ## section#exceptions
 
 - exceptions.title: And if something changes?

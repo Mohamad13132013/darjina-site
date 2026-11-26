@@ -11,9 +11,11 @@
 
 ## section#hero
 
+- hero.badge: New: take Instagram orders online
+- hero.badge_href: #online
 - hero.eyebrow: For abaya tailor shops in the GCC
 - hero.headline: Every abaya order, from measuring to delivery, on your phone.
-- hero.subheadline: Darjina is an Arabic-first app that records your customer, her measurements and her receipt in a minute, then tracks payments and orders right up to delivery day. Built for shop owners and their counter team.
+- hero.subheadline: Darjina is an Arabic-first app that records your customer, her measurements and her receipt in a minute, takes her orders online from Instagram, and tracks payments and orders right up to delivery day. Built for shop owners and their counter team.
 - hero.cta_primary: Chat with us on WhatsApp
 - hero.cta_primary_href: https://wa.me/97336369493
 - hero.cta_secondary: See the features
@@ -66,6 +68,27 @@
     features.card6.text: Outstanding balances, late orders, money collected today in each branch. Your shop's numbers in front of you.
 - features.cta: All features in detail
 - features.cta_href: /features
+
+---
+
+## section#online
+
+- online.eyebrow: New · Online orders
+- online.title: Your customers order from Instagram… and the request reaches your phone
+- online.text: Switch on your shop's order page and put its link in your Instagram bio or your WhatsApp messages. Your customer picks a model and the number of pieces, sees the price and the total, and sends her request. Your team contacts her and turns the request into a receipt.
+- online.items:
+  - A link named after your Instagram account, such as darjina.com/o/yourshop, plus a link for each model to put under its post.
+  - Your model catalogue with photos, codes and prices, managed from the app.
+  - Optional stock per model: no one can order more than you have, and a sold-out model disappears from the page.
+  - A notification on your phone for every new request, and one step to turn it into a normal receipt.
+  - Optional: the shop owner switches it on and off at any time.
+- online.cta_primary: Request a demo
+- online.cta_primary_href: https://wa.me/97336369493
+- online.cta_secondary: Online orders in detail
+- online.cta_secondary_href: /features#online
+- online.float_card: New online request · Plain crepe abaya × 2
+- online.image: [Image: a phone showing an abaya shop's online order page, next to a "New online request" card]
+- online.image_alt: An abaya shop's online order page: two models with prices, the pieces and total, and a send button
 
 ---
 
@@ -152,18 +175,20 @@
 
 - faq.title: Frequently asked questions
 - faq.items:
-  - faq.q1: Is Darjina suitable for a small shop?
-    faq.a1: Yes. It works for a shop with one branch and one staff member, and it grows with you as you open new branches.
-  - faq.q2: Which devices does it run on?
-    faq.a2: It's available now on iPhone from the App Store, and the Android version is coming soon to Google Play. It needs an internet connection while you work.
-  - faq.q3: Does it support my country's currency?
-    faq.a3: Yes. Each shop has its own currency: Bahraini dinar by default, as well as Saudi riyal, UAE dirham and others, and every receipt keeps the currency it was created in.
-  - faq.q4: Can staff see everything?
-    faq.a4: No. Staff record and follow up orders and payments, while price changes, refunds and the full dashboard are for the shop owner.
-  - faq.q5: Who can see my customers' data?
-    faq.a5: Only your shop's team. Every shop is separate from the others, and we don't sell or share data.
-  - faq.q6: How much is the subscription?
-    faq.a6: Chat with us on WhatsApp and we'll arrange a demo for you, then agree on what suits your shop.
+  - faq.q1: Can customers order online?
+    faq.a1: Yes. Switch on your shop's order page in the app and put its link on Instagram or WhatsApp. Your customer picks a model and sends her request, and your team contacts her and turns it into a receipt. For now, payment is made at the shop as usual.
+  - faq.q2: Is Darjina suitable for a small shop?
+    faq.a2: Yes. It works for a shop with one branch and one staff member, and it grows with you as you open new branches.
+  - faq.q3: Which devices does it run on?
+    faq.a3: It's available now on iPhone from the App Store, and the Android version is coming soon to Google Play. It needs an internet connection while you work.
+  - faq.q4: Does it support my country's currency?
+    faq.a4: Yes. Each shop has its own currency: Bahraini dinar by default, as well as Saudi riyal, UAE dirham and others, and every receipt keeps the currency it was created in.
+  - faq.q5: Can staff see everything?
+    faq.a5: No. Staff record and follow up orders and payments, while price changes, refunds and the full dashboard are for the shop owner.
+  - faq.q6: Who can see my customers' data?
+    faq.a6: Only your shop's team. Every shop is separate from the others, and we don't sell or share data.
+  - faq.q7: How much is the subscription?
+    faq.a7: Chat with us on WhatsApp and we'll arrange a demo for you, then agree on what suits your shop.
 
 ---
 
